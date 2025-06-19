@@ -40,8 +40,8 @@ class NewsHandler:
 
     def _print_article_row(self, article: dict, idx: int):
         title = article.get("title", "[No Title]")
-        date = article.get("published_at", "N/A")
-        print(f"{idx}. {title} ({date})")
+        pub = article.get("published_at", "N/A")
+        print(f"{idx}. {title} ({pub})")
 
     def paginate_and_display(self, title, fetch_fn, on_select=None, display_fn=None):
         cli_paginate_items(
@@ -53,6 +53,58 @@ class NewsHandler:
         )
 
     def view_article(self, article: dict):
+        self._render_article(article)
+
+        article_id = article.get("id")
+        if not article_id:
+            print("Missing article ID.")
+            return
+
+        self._post_json("/api/news/viewed", {"article_id": article_id})
+
+        print("\nOptions:\n1. Save Article\n2. Like\n3. Dislike\n4. Go Back")
+        choice = input("Choose an option: ").strip()
+        if choice == "1":
+            self._save_article(article_id)
+        elif choice == "2":
+            self._react_to_article(article_id, True)
+        elif choice == "3":
+            self._react_to_article(article_id, False)
+
+    def view_saved_article(self, article: dict):
+        self._render_article(article)
+
+        article_id = article.get("id")
+        if not article_id:
+            print("Missing article ID.")
+            return
+
+        print("\nOptions:\n1. Remove from Saved\n2. Like\n3. Dislike\n4. Back")
+        choice = input("Choose an option: ").strip()
+        if choice == "1":
+            self._remove_saved_article(article_id)
+        elif choice == "2":
+            self._react_to_article(article_id, True)
+        elif choice == "3":
+            self._react_to_article(article_id, False)
+
+    def _react_to_article(self, article_id: int, is_like: bool):
+        resp = self._post_json(
+            "/api/news/react",
+            {
+                "user_id": self.current_user["id"],
+                "article_id": article_id,
+                "is_like": is_like,
+            },
+        )
+        if resp is None:
+            return
+        if resp.status_code in (200, 201):
+            print("Article liked." if is_like else "Article disliked.")
+        else:
+            print(f"Failed to react (HTTP {resp.status_code}).")
+
+    def _render_article(self, article: dict):
         print("\n--- Article Details ---")
         for label, key in [
             ("Title", "title"),
@@ -64,25 +116,10 @@ class NewsHandler:
         ]:
             print(f"{label}: {article.get(key, 'N/A')}")
 
-        article_id = article.get("id")
-        if not article_id:
-            print("Missing article ID.")
-            return
-
-        self._post_json("/api/news/viewed", {"article_id": article_id})
-
-        print("\nOptions:\n1. Save Article\n2. Go Back")
-        choice = input("Choose an option: ").strip()
-        if choice == "1":
-            self._save_article(article_id)
-
-    def _save_article(self, article_id):
+    def _save_article(self, article_id: int):
         resp = self._post_json(
             "/api/news/save",
-            {
-                "user_id": self.current_user["id"],
-                "article_id": article_id,
-            },
+            {"user_id": self.current_user["id"], "article_id": article_id},
         )
         if resp is None:
             return
@@ -91,7 +128,21 @@ class NewsHandler:
         elif resp.status_code == 409:
             print("Article already saved.")
         else:
-            print(f"Save failed ({resp.status_code})")
+            print(f"Save failed ({resp.status_code}).")
+
+    def _remove_saved_article(self, article_id: int):
+        route = (
+            f"/api/news/save?user_id={self.current_user['id']}&article_id={article_id}"
+        )
+        resp = self._delete(route)
+        if resp is None:
+            return
+        if resp.status_code == 200:
+            print("Article removed from saved list.")
+        elif resp.status_code == 404:
+            print("Article not found in saved list.")
+        else:
+            print(f"Failed to remove article ({resp.status_code}).")
 
     def list_news(self):
         categories = self._get_json("/api/categories", default=[])
@@ -99,8 +150,7 @@ class NewsHandler:
             print("No categories available.")
             return
 
-        print("\n--- Categories ---")
-        print("0. All")
+        print("\n--- Categories ---\n0. All")
         for i, cat in enumerate(categories, 1):
             print(f"{i}. {cat['name']}")
 
@@ -108,18 +158,17 @@ class NewsHandler:
         if not choice.isdigit():
             print("Invalid input.")
             return
-
         idx = int(choice)
+        if not 0 <= idx <= len(categories):
+            print("Invalid category selection.")
+            return
+
         category = "" if idx == 0 else categories[idx - 1]["name"]
 
         def fetch(limit, offset):
             return self._get_json(
                 "/api/news/latest",
-                {
-                    "limit": limit,
-                    "offset": offset,
-                    "category": category,
-                },
+                {"limit": limit, "offset": offset, "category": category},
                 default=[],
             )
 
@@ -137,7 +186,9 @@ class NewsHandler:
                 default=[],
             )
 
-        self.paginate_and_display("Saved Articles", fetch)
+        self.paginate_and_display(
+            "Saved Articles", fetch, on_select=self.view_saved_article
+        )
 
     def search_articles(self):
         keyword = input("Keyword (optional): ").strip()
@@ -183,10 +234,8 @@ class NewsHandler:
             "2": self._add_source,
             "3": self._remove_source,
         }
-
         while True:
-            print("\n--- Manage Sources ---")
-            print("1. List\n2. Add\n3. Remove\n4. Back")
+            print("\n--- Manage Sources ---\n1. List\n2. Add\n3. Remove\n4. Back")
             choice = input("Select: ").strip()
             if choice == "4":
                 break
@@ -207,18 +256,15 @@ class NewsHandler:
         if not name:
             print("Name required.")
             return
-
         resp = self._post_json("/api/admin/news-sources", {"name": name})
         if resp is None:
             return
-
-        status = resp.status_code
-        if status == 201:
+        if resp.status_code == 201:
             print("Source added.")
-        elif status == 409:
+        elif resp.status_code == 409:
             print("Source already exists.")
         else:
-            print(f"Failed to add source (HTTP {status}).")
+            print(f"Failed to add source (HTTP {resp.status_code}).")
 
     def _remove_source(self):
         src_id = input("Source ID to remove: ").strip()
@@ -226,21 +272,15 @@ class NewsHandler:
             print("Invalid ID.")
             return
         resp = self._delete(f"/api/admin/news-sources/{src_id}")
-        print(
-            "Source removed."
-            if resp and resp.status_code == 200
-            else "Error removing source."
-        )
+        if resp and resp.status_code == 200:
+            print("Source removed.")
+        else:
+            print("Error removing source.")
 
     def manage_categories(self):
-        options = {
-            "1": self._add_category,
-            "2": self._delete_category,
-        }
-
+        options = {"1": self._add_category, "2": self._delete_category}
         while True:
-            print("\n--- Manage Categories ---")
-            print("1. Add\n2. Delete\n3. Back")
+            print("\n--- Manage Categories ---\n1. Add\n2. Delete\n3. Back")
             choice = input("Select: ").strip()
             if choice == "3":
                 break
@@ -251,39 +291,65 @@ class NewsHandler:
                 print("Invalid option.")
 
     def _add_category(self):
-        name = input("New category name: ").strip()
+        name = input("\nNew category name: ").strip()
         if not name:
             print("Name required.")
             return
-
         resp = self._post_json("/api/categories", {"name": name})
         if resp is None:
             return
-
-        status = resp.status_code
-        if status == 201:
+        if resp.status_code == 201:
             print("Category added.")
-        elif status == 409:
+        elif resp.status_code == 409:
             print("Category already exists.")
         else:
-            print(f"Failed to add category (HTTP {status}).")
+            print(f"Failed to add category (HTTP {resp.status_code}).")
 
     def _delete_category(self):
         categories = self._get_json("/api/categories", default=[])
         if not categories:
             print("No categories.")
             return
-
         for cat in categories:
             print(f"{cat['id']}: {cat['name']}")
-
-        cat_id = input("Category ID to delete: ").strip()
+        cat_id = input("\nCategory ID to delete: ").strip()
         if not cat_id.isdigit():
             print("Invalid ID.")
             return
-
         resp = self._delete(f"/api/categories/{cat_id}")
         if resp and resp.status_code == 200:
             print("Deleted.")
         else:
             print("Failed to delete.")
+
+    def list_liked_articles(self):
+        def fetch(limit, offset):
+            return self._get_json(
+                "/api/news/reactions",
+                {
+                    "user_id": self.current_user["id"],
+                    "type": "like",
+                    "limit": limit,
+                    "offset": offset,
+                },
+                default=[],
+            )
+
+        self.paginate_and_display("Liked Articles", fetch, on_select=self.view_article)
+
+    def list_disliked_articles(self):
+        def fetch(limit, offset):
+            return self._get_json(
+                "/api/news/reactions",
+                {
+                    "user_id": self.current_user["id"],
+                    "type": "dislike",
+                    "limit": limit,
+                    "offset": offset,
+                },
+                default=[],
+            )
+
+        self.paginate_and_display(
+            "Disliked Articles", fetch, on_select=self.view_article
+        )

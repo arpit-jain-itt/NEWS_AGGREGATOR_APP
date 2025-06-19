@@ -7,6 +7,7 @@ from server.repository.article_repository import ArticleRepository
 from server.repository.category_repository import CategoryRepository
 from server.repository.source_repository import SourceRepository
 from server.repository.viewed_article_repository import ViewedArticleRepository
+from server.repository.likes_dislikes_repository import LikesDislikesRepository
 from server.repository.db_connector import db
 from server.utils.auth import require_role
 
@@ -18,6 +19,7 @@ news_service = NewsService(
     CategoryRepository(db),
     SourceRepository(db),
     ViewedArticleRepository(db),
+    LikesDislikesRepository(db),
 )
 
 source_repo = SourceRepository(db)

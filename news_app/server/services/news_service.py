@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Literal
 from datetime import datetime
 from dateutil.parser import parse as parse_datetime
 
@@ -6,6 +6,7 @@ from server.repository.article_repository import ArticleRepository
 from server.repository.category_repository import CategoryRepository
 from server.repository.source_repository import SourceRepository
 from server.repository.viewed_article_repository import ViewedArticleRepository
+from server.repository.likes_dislikes_repository import LikesDislikesRepository
 from server.external_apis.newsapi_org import NewsApiOrgClient
 from server.external_apis.thenewsapi_com import TheNewsApiClient
 from server.models.article_model import Article
@@ -21,11 +22,13 @@ class NewsService:
         category_repo: CategoryRepository,
         source_repo: SourceRepository,
         viewed_repo: ViewedArticleRepository,
+        likes_repo: LikesDislikesRepository,
     ):
         self.article_repo = article_repo
         self.category_repo = category_repo
         self.source_repo = source_repo
         self.viewed_repo = viewed_repo
+        self.likes_repo = likes_repo
 
     def fetch_and_store_news(self) -> None:
         # first go for newsapi, then thenewsapi
@@ -171,9 +174,37 @@ class NewsService:
     def save_article(self, user_id: int, article_id: int) -> str:
         return self.article_repo.save_article_for_user(user_id, article_id)
 
+    def remove_saved_article(self, user_id: int, article_id: int) -> str:
+        return self.article_repo.remove_saved_article(user_id, article_id)
+
     def get_saved_articles_by_user(
         self, user_id: int, limit: int = 20, offset: int = 0
     ) -> List[Article]:
         return self.article_repo.get_saved_articles_by_user(
             user_id, limit=limit, offset=offset
+        )
+
+    def react_to_article(self, user_id: int, article_id: int, is_like: bool) -> str:
+        return self.likes_repo.upsert_reaction(user_id, article_id, is_like)
+
+    def remove_reaction(self, user_id: int, article_id: int) -> str:
+        return self.likes_repo.delete_reaction(user_id, article_id)
+
+    def get_reaction_summary(self, user_id: int) -> dict:
+        likes, dislikes = self.likes_repo.get_reaction_summary(user_id)
+        return {"likes": likes, "dislikes": dislikes}
+
+    def get_reacted_articles(
+        self,
+        user_id: int,
+        reaction_type: Literal["like", "dislike"],
+        limit: int = 20,
+        offset: int = 0,
+    ) -> List[Article]:
+        is_like = reaction_type == "like"
+        return self.likes_repo.get_reacted_articles(
+            user_id=user_id,
+            is_like=is_like,
+            limit=limit,
+            offset=offset,
         )

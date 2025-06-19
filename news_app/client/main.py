@@ -27,8 +27,10 @@ def user_menu():
     print("2. View News by Category")
     print("3. Search Articles")
     print("4. View Saved Articles")
-    print("5. Notifications Settings")
-    print("6. Logout")
+    print("5. View Liked Articles")
+    print("6. View Disliked Articles")
+    print("7. Notifications Settings")
+    print("8. Logout")
     return input("Choose an option: ").strip()
 
 
@@ -107,8 +109,12 @@ def run():
                     elif choice == "4":
                         news.list_saved_articles()
                     elif choice == "5":
-                        notifications.manage_notifications()
+                        news.list_liked_articles()
                     elif choice == "6":
+                        news.list_disliked_articles()
+                    elif choice == "7":
+                        notifications.manage_notifications()
+                    elif choice == "8":
                         auth.logout()
                         news = notifications = search = None
                     else:

@@ -226,6 +226,25 @@ class ArticleRepository:
         finally:
             cursor.close()
 
+    def remove_saved_article(self, user_id: int, article_id: int) -> str:
+        conn = self.db.connect()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "DELETE FROM saved_articles WHERE user_id = %s AND article_id = %s",
+                (user_id, article_id),
+            )
+            if cursor.rowcount == 0:
+                conn.rollback()
+                return "not_found"
+            conn.commit()
+            return "deleted"
+        except Exception:
+            conn.rollback()
+            return "error"
+        finally:
+            cursor.close()
+
     def get_saved_articles_by_user(
         self, user_id: int, limit=20, offset=0
     ) -> List[Article]:

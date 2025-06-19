@@ -1,6 +1,5 @@
 from flask import Flask, jsonify
 from flask_restx import Api
-
 from server.controllers.user_controller import api as user_ns
 from server.controllers.admin_controller import api as admin_ns
 from server.controllers.news_controller import api as news_ns
@@ -15,12 +14,19 @@ def create_app() -> Flask:
     app = Flask(__name__)
     app.secret_key = secrets.token_hex(32)
 
+    # test auth for swagger
+    authorizations = {
+        "Bearer Auth": {"type": "apiKey", "in": "header", "name": "Authorization"}
+    }
+
     api = Api(
         app,
         version="1.0",
         title="News Aggregator API",
         description="API for News Aggregator",
         doc="/swagger",
+        authorizations=authorizations,
+        security="Bearer Auth",
     )
 
     api.add_namespace(user_ns, path="/api/users")

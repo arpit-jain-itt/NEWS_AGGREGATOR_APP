@@ -6,6 +6,7 @@ from server.repository.article_repository import ArticleRepository
 from server.repository.category_repository import CategoryRepository
 from server.repository.source_repository import SourceRepository
 from server.repository.viewed_article_repository import ViewedArticleRepository
+from server.repository.likes_dislikes_repository import LikesDislikesRepository
 from server.utils.response_formatter import format_response
 from server.repository.db_connector import db
 
@@ -16,6 +17,7 @@ news_service = NewsService(
     CategoryRepository(db),
     SourceRepository(db),
     ViewedArticleRepository(db),
+    LikesDislikesRepository(db),
 )
 
 
@@ -36,7 +38,6 @@ class Headlines(Resource):
         start_str = args.get("start_date")
         end_str = args.get("end_date")
         limit, offset = _get_pagination(args)
-
         try:
             start_date = (
                 datetime.fromisoformat(start_str).date()
@@ -46,23 +47,11 @@ class Headlines(Resource):
             end_date = datetime.fromisoformat(end_str).date() if end_str else start_date
         except ValueError:
             return format_response(
-                {"message": "Invalid date format. Use YYYY-MM-DD."},
-                status_code=400,
-                success=False,
+                {"message": "Invalid date format. Use YYYY-MM-DD."}, 400, False
             )
-
         start_dt = datetime.combine(start_date, datetime.min.time())
         end_dt = datetime.combine(end_date, datetime.max.time())
-
-        articles = news_service.search_articles(
-            keyword="",
-            category="",
-            start_date=start_dt,
-            end_date=end_dt,
-            limit=limit,
-            offset=offset,
-        )
-
+        articles = news_service.search_articles("", "", start_dt, end_dt, limit, offset)
         return format_response(
             [
                 {
@@ -77,7 +66,7 @@ class Headlines(Resource):
                 }
                 for a in articles
             ],
-            status_code=200,
+            200,
         )
 
 
@@ -87,10 +76,7 @@ class LatestNews(Resource):
         args = flask.request.args
         category = args.get("category")
         limit, offset = _get_pagination(args)
-
-        articles = news_service.get_latest_articles(
-            category_name=category, limit=limit, offset=offset
-        )
+        articles = news_service.get_latest_articles(category, limit, offset)
         return format_response(
             [
                 {
@@ -105,7 +91,7 @@ class LatestNews(Resource):
                 }
                 for a in articles
             ],
-            status_code=200,
+            200,
         )
 
 
@@ -113,22 +99,18 @@ class LatestNews(Resource):
 class SearchArticles(Resource):
     def get(self):
         args = flask.request.args
-
         keyword = args.get("keyword", "").strip()
         category = args.get("category", "").strip()
         start_str = args.get("start_date")
         end_str = args.get("end_date")
         limit, offset = _get_pagination(args)
-
         start_dt = end_dt = None
         if start_str:
             try:
                 start_dt = datetime.fromisoformat(start_str)
             except ValueError:
                 return format_response(
-                    {"message": "Invalid start_date. Use YYYY-MM-DD."},
-                    status_code=400,
-                    success=False,
+                    {"message": "Invalid start_date. Use YYYY-MM-DD."}, 400, False
                 )
         if end_str:
             try:
@@ -140,20 +122,11 @@ class SearchArticles(Resource):
                 )
             except ValueError:
                 return format_response(
-                    {"message": "Invalid end_date. Use YYYY-MM-DD."},
-                    status_code=400,
-                    success=False,
+                    {"message": "Invalid end_date. Use YYYY-MM-DD."}, 400, False
                 )
-
         results = news_service.search_articles(
-            keyword=keyword,
-            category=category,
-            start_date=start_dt,
-            end_date=end_dt,
-            limit=limit,
-            offset=offset,
+            keyword, category, start_dt, end_dt, limit, offset
         )
-
         return format_response(
             [
                 {
@@ -168,7 +141,7 @@ class SearchArticles(Resource):
                 }
                 for a in results
             ],
-            status_code=200,
+            200,
         )
 
 
@@ -176,9 +149,7 @@ class SearchArticles(Resource):
 class NewsCategories(Resource):
     def get(self):
         categories = news_service.category_repo.get_all_categories()
-        return format_response(
-            [{"id": c.id, "name": c.name} for c in categories], status_code=200
-        )
+        return format_response([{"id": c.id, "name": c.name} for c in categories], 200)
 
 
 @api.route("/save")
@@ -187,14 +158,35 @@ class SaveArticle(Resource):
         data = flask.request.get_json()
         if not data or "user_id" not in data or "article_id" not in data:
             return format_response(
-                {"message": "user_id and article_id are required"}, status_code=400
+                {"message": "user_id and article_id are required"}, 400
             )
         result = news_service.save_article(data["user_id"], data["article_id"])
         if result == "saved":
             return format_response({"message": "Article saved successfully."}, 201)
-        elif result == "already_saved":
+        if result == "already_saved":
             return format_response({"message": "Article already saved."}, 409)
         return format_response({"message": "Failed to save article."}, 500)
+
+    def delete(self):
+        user_id = flask.request.args.get("user_id")
+        article_id = flask.request.args.get("article_id")
+        if not user_id or not article_id:
+            return format_response(
+                {"message": "user_id and article_id are required"}, 400
+            )
+        try:
+            user_id = int(user_id)
+            article_id = int(article_id)
+        except ValueError:
+            return format_response(
+                {"message": "user_id and article_id must be integers"}, 400
+            )
+        result = news_service.remove_saved_article(user_id, article_id)
+        if result == "deleted":
+            return format_response({"message": "Article removed successfully."}, 200)
+        if result == "not_found":
+            return format_response({"message": "Saved article not found."}, 404)
+        return format_response({"message": "Failed to remove article."}, 500)
 
 
 @api.route("/viewed")
@@ -224,7 +216,6 @@ class SavedArticles(Resource):
             user_id = int(user_id)
         except ValueError:
             return format_response({"message": "user_id must be an integer"}, 400)
-
         saved_articles = news_service.get_saved_articles_by_user(user_id)
         return format_response(
             [
@@ -242,3 +233,101 @@ class SavedArticles(Resource):
             ],
             200,
         )
+
+
+@api.route("/react")
+class ArticleReaction(Resource):
+    def post(self):
+        data = flask.request.get_json()
+        if not data or {"user_id", "article_id", "is_like"} - data.keys():
+            return format_response(
+                {"message": "user_id, article_id and is_like are required"}, 400
+            )
+        result = news_service.react_to_article(
+            data["user_id"], data["article_id"], bool(data["is_like"])
+        )
+        if result in ("created", "updated"):
+            return format_response(
+                {"message": f"Reaction {result}."}, 201 if result == "created" else 200
+            )
+        return format_response({"message": "Failed to save reaction."}, 500)
+
+    def delete(self):
+        user_id = flask.request.args.get("user_id")
+        article_id = flask.request.args.get("article_id")
+        if not user_id or not article_id:
+            return format_response(
+                {"message": "user_id and article_id are required"}, 400
+            )
+        try:
+            user_id = int(user_id)
+            article_id = int(article_id)
+        except ValueError:
+            return format_response(
+                {"message": "user_id and article_id must be integers"}, 400
+            )
+        result = news_service.remove_reaction(user_id, article_id)
+        if result == "deleted":
+            return format_response({"message": "Reaction removed."}, 200)
+        if result == "not_found":
+            return format_response({"message": "Reaction not found."}, 404)
+        return format_response({"message": "Failed to remove reaction."}, 500)
+
+
+@api.route("/reactions/summary")
+class ReactionSummary(Resource):
+    def get(self):
+        user_id = flask.request.args.get("user_id")
+        if not user_id:
+            return format_response({"message": "user_id is required"}, 400)
+        try:
+            user_id = int(user_id)
+        except ValueError:
+            return format_response({"message": "user_id must be an integer"}, 400)
+        summary = news_service.get_reaction_summary(user_id)
+        return format_response(summary, 200)
+
+
+@api.route("/reactions")
+class ReactedArticles(Resource):
+    def get(self):
+        args = flask.request.args
+        user_id = args.get("user_id")
+        reaction_type = args.get("type", "like").lower()
+        if not user_id:
+            return format_response({"message": "user_id is required"}, 400)
+        try:
+            user_id = int(user_id)
+        except ValueError:
+            return format_response({"message": "user_id must be an integer"}, 400)
+        if reaction_type not in ("like", "dislike"):
+            return format_response({"message": "type must be 'like' or 'dislike'"}, 400)
+        limit, offset = _get_pagination(args)
+        articles = news_service.get_reacted_articles(
+            user_id, reaction_type, limit, offset
+        )
+        return format_response(
+            [
+                {
+                    "id": a.id,
+                    "title": a.title,
+                    "description": a.description,
+                    "content": a.content,
+                    "url": a.url,
+                    "published_at": a.published_at.isoformat(),
+                    "source_id": a.source_id,
+                    "category_id": a.category_id,
+                }
+                for a in articles
+            ],
+            200,
+        )
+
+
+@api.route("/reactions/article/<int:article_id>")
+class ArticleReactionCounts(Resource):
+    def get(self, article_id):
+        counts = news_service.get_article_reactions_count(article_id)
+        if counts is None:
+            return format_response({"message": "Article not found."}, 404)
+        return format_response(counts, 200)
