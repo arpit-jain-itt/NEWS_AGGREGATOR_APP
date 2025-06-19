@@ -207,11 +207,18 @@ class NewsHandler:
         if not name:
             print("Name required.")
             return
+
         resp = self._post_json("/api/admin/news-sources", {"name": name})
-        if resp and resp.status_code == 201:
+        if resp is None:
+            return
+
+        status = resp.status_code
+        if status == 201:
             print("Source added.")
+        elif status == 409:
+            print("Source already exists.")
         else:
-            print("Failed to add source.")
+            print(f"Failed to add source (HTTP {status}).")
 
     def _remove_source(self):
         src_id = input("Source ID to remove: ").strip()
@@ -248,13 +255,18 @@ class NewsHandler:
         if not name:
             print("Name required.")
             return
+
         resp = self._post_json("/api/categories", {"name": name})
-        if resp and resp.status_code == 201:
+        if resp is None:
+            return
+
+        status = resp.status_code
+        if status == 201:
             print("Category added.")
-        elif resp and resp.status_code == 409:
-            print("Category exists.")
+        elif status == 409:
+            print("Category already exists.")
         else:
-            print("Failed to add category.")
+            print(f"Failed to add category (HTTP {status}).")
 
     def _delete_category(self):
         categories = self._get_json("/api/categories", default=[])

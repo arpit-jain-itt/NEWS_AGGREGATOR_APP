@@ -14,7 +14,7 @@ add_category_model = api.model(
 )
 
 
-@api.route("/")
+@api.route("")
 class CategoryCollection(Resource):
     def get(self):
         categories = category_repo.get_all_categories()
@@ -26,19 +26,20 @@ class CategoryCollection(Resource):
     @require_role("admin")
     @api.expect(add_category_model)
     def post(self):
-        name = (api.payload or {}).get("name", "").strip().lower()
+        name = (api.payload or {}).get("name", "").strip()
         if not name:
             return format_response(
                 None, success=False, message="name is required", status_code=400
             )
 
-        if category_repo.add_category(name):
+        success = category_repo.add_category(name)
+        if success:
             return format_response(None, message="Category added", status_code=201)
 
         return format_response(
             None,
             success=False,
-            message="Category already exists or could not be added",
+            message="Category already exists",
             status_code=409,
         )
 
@@ -48,7 +49,6 @@ class CategoryCollection(Resource):
 class CategoryItem(Resource):
     @require_role("admin")
     def delete(self, category_id):
-        """Delete a category by ID (admin only)."""
         if category_repo.delete_category_by_id(category_id):
             return format_response(None, message="Category deleted", status_code=200)
 
