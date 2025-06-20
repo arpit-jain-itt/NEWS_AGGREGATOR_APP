@@ -18,10 +18,11 @@ class CategoryRepository:
             cursor.close()
 
     def get_category_by_name(self, name: str) -> Optional[Category]:
+        name = name.strip().lower()
         conn = self.db.connect()
         cursor = conn.cursor(dictionary=True)
         try:
-            cursor.execute("SELECT * FROM categories WHERE name = %s", (name,))
+            cursor.execute("SELECT * FROM categories WHERE LOWER(name) = %s", (name,))
             row = cursor.fetchone()
             return Category(**row) if row else None
         finally:
@@ -45,6 +46,20 @@ class CategoryRepository:
             return False
         finally:
             cursor.close()
+
+    def get_or_create_category(self, name: str) -> Optional[Category]:
+        cat = self.get_category_by_name(name)
+        if cat:
+            return cat
+        if self.add_category(name):
+            return self.get_category_by_name(name)
+        return None
+
+    def get_general_category(self) -> Category:
+        cat = self.get_or_create_category("general")
+        if cat is None:
+            raise RuntimeError("Unable to obtain or create 'general' category")
+        return cat
 
     def delete_category_by_id(self, category_id: int) -> bool:
         try:

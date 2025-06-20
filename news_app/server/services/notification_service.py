@@ -47,7 +47,7 @@ class NotificationService:
                 self.viewed_repo.get_viewed_article_ids_by_user(user.id)
             )
 
-            # Fetch latest articles (no timestamp filter)
+            # Fetch latest articles
             recent_articles = self.article_repo.search_articles(limit=100)
 
             # Category filter
@@ -70,7 +70,7 @@ class NotificationService:
                     )
                 ]
 
-            # Exclude viewed
+            # Exclud
             matched_articles = [
                 art for art in recent_articles if art.id not in viewed_article_ids
             ]

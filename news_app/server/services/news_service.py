@@ -120,7 +120,10 @@ class NewsService:
 
     def _category_id(self, category_name: str) -> int:
         cat = self.category_repo.get_category_by_name(category_name)
-        return cat.id if cat else 0
+        if cat:
+            return cat.id
+        # go to general category if not match with any other ones
+        return self.category_repo.get_general_category().id
 
     def get_latest_articles(
         self,

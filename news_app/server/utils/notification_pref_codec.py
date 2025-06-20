@@ -16,7 +16,7 @@ def _split_csv(raw: str) -> List[str]:
 
 def encode_preferences(categories_csv: str, keywords_csv: str) -> str:
     # converting CSV in JSON BLOB for storing mysql
-    # '{"categories": ["tech", "business"], "keywords": ["tesla", "trump"]}'
+    # '{"categories": ["technology", "business"], "keywords": ["tesla", "trump"]}'
     payload: Dict[str, List[str]] = {
         "categories": _split_csv(categories_csv),
         "keywords": _split_csv(keywords_csv),
