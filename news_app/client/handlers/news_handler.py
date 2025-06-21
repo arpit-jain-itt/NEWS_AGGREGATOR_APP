@@ -100,7 +100,11 @@ class NewsHandler:
         if resp is None:
             return
         if resp.status_code in (200, 201):
-            print("Article liked." if is_like else "Article disliked.")
+            try:
+                msg = resp.json().get("data", {}).get("message", "")
+                print(msg or "Action successful.")
+            except Exception:
+                print("Action successful.")
         else:
             print(f"Failed to react (HTTP {resp.status_code}).")
 

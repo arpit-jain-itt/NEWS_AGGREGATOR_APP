@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Any
 from datetime import datetime
 from server.models.article_model import Article
 from server.repository.db_connector import DBConnector
@@ -9,70 +9,62 @@ class LikesDislikesRepository:
         self.db = db
 
     def upsert_reaction(self, user_id: int, article_id: int, is_like: bool) -> str:
+        query_update = """
+            UPDATE likes_dislikes
+            SET is_like = %s, created_at = NOW()
+            WHERE user_id = %s AND article_id = %s
+        """
+        query_insert = """
+            INSERT INTO likes_dislikes (user_id, article_id, is_like, created_at)
+            VALUES (%s, %s, %s, NOW())
+        """
+
         conn = self.db.connect()
-        cursor = conn.cursor()
         try:
-            cursor.execute(
-                """
-                UPDATE likes_dislikes
-                SET is_like = %s, created_at = NOW()
-                WHERE user_id = %s AND article_id = %s
-                """,
-                (is_like, user_id, article_id),
+            affected = self._run_write(
+                conn, query_update, (is_like, user_id, article_id)
             )
-            if cursor.rowcount == 0:
-                cursor.execute(
-                    """
-                    INSERT INTO likes_dislikes
-                        (user_id, article_id, is_like, created_at)
-                    VALUES (%s, %s, %s, NOW())
-                    """,
-                    (user_id, article_id, is_like),
-                )
-                conn.commit()
+            if affected == 0:
+                self._run_write(conn, query_insert, (user_id, article_id, is_like))
                 return "created"
-            conn.commit()
             return "updated"
         except Exception:
-            conn.rollback()
             return "error"
-        finally:
-            cursor.close()
 
     def delete_reaction(self, user_id: int, article_id: int) -> str:
+        query = "DELETE FROM likes_dislikes WHERE user_id = %s AND article_id = %s"
         conn = self.db.connect()
-        cursor = conn.cursor()
         try:
-            cursor.execute(
-                "DELETE FROM likes_dislikes WHERE user_id=%s AND article_id=%s",
-                (user_id, article_id),
-            )
-            if cursor.rowcount == 0:
-                conn.rollback()
-                return "not_found"
-            conn.commit()
-            return "deleted"
+            affected = self._run_write(conn, query, (user_id, article_id))
+            return "deleted" if affected else "not_found"
         except Exception:
-            conn.rollback()
             return "error"
-        finally:
-            cursor.close()
+
+    def remove_like(self, user_id: int, article_id: int) -> str:
+        return self._remove_specific_reaction(user_id, article_id, True)
+
+    def remove_dislike(self, user_id: int, article_id: int) -> str:
+        return self._remove_specific_reaction(user_id, article_id, False)
+
+    def get_user_reaction(self, user_id: int, article_id: int) -> Optional[bool]:
+        query = (
+            "SELECT is_like FROM likes_dislikes WHERE user_id = %s AND article_id = %s"
+        )
+        row = self._run_fetchone(query, (user_id, article_id))
+        if row is None:
+            return None
+        return bool(row[0])
 
     def get_reaction_summary(self, user_id: int) -> Tuple[int, int]:
-        conn = self.db.connect()
-        cursor = conn.cursor()
-        cursor.execute(
-            """
+        query = """
             SELECT
               SUM(is_like = 1) AS likes,
               SUM(is_like = 0) AS dislikes
             FROM likes_dislikes
             WHERE user_id = %s
-            """,
-            (user_id,),
-        )
-        likes, dislikes = cursor.fetchone()
-        cursor.close()
+        """
+        row = self._run_fetchone(query, (user_id,))
+        likes, dislikes = row if row else (0, 0)
         return likes or 0, dislikes or 0
 
     def get_reacted_articles(
@@ -82,24 +74,57 @@ class LikesDislikesRepository:
         limit: int = 20,
         offset: int = 0,
     ) -> List[Article]:
-        conn = self.db.connect()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute(
-            """
+        query = """
             SELECT a.*, c.name AS category_name
             FROM likes_dislikes ld
-            JOIN articles a          ON ld.article_id = a.id
-            LEFT JOIN categories c   ON a.category_id = c.id
+            JOIN articles a        ON ld.article_id = a.id
+            LEFT JOIN categories c ON a.category_id = c.id
             WHERE ld.user_id = %s
               AND ld.is_like = %s
             ORDER BY ld.created_at DESC
             LIMIT %s OFFSET %s
-            """,
-            (user_id, is_like, limit, offset),
-        )
+        """
+        conn = self.db.connect()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(query, (user_id, is_like, limit, offset))
         rows = cursor.fetchall()
         cursor.close()
         return self._build_articles(rows)
+
+    def _remove_specific_reaction(
+        self, user_id: int, article_id: int, is_like: bool
+    ) -> str:
+        query = """
+            DELETE FROM likes_dislikes
+            WHERE user_id = %s AND article_id = %s AND is_like = %s
+        """
+        conn = self.db.connect()
+        try:
+            affected = self._run_write(conn, query, (user_id, article_id, is_like))
+            return "deleted" if affected else "not_found"
+        except Exception:
+            return "error"
+
+    def _run_write(self, conn, query: str, params: tuple) -> int:
+        cursor = conn.cursor()
+        try:
+            cursor.execute(query, params)
+            affected = cursor.rowcount
+            conn.commit()
+            return affected
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            cursor.close()
+
+    def _run_fetchone(self, query: str, params: tuple) -> Optional[Any]:
+        conn = self.db.connect()
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        row = cursor.fetchone()
+        cursor.close()
+        return row
 
     def _build_articles(self, rows: List[dict]) -> List[Article]:
         articles: List[Article] = []

@@ -246,10 +246,10 @@ class ArticleReaction(Resource):
         result = news_service.react_to_article(
             data["user_id"], data["article_id"], bool(data["is_like"])
         )
-        if result in ("created", "updated"):
-            return format_response(
-                {"message": f"Reaction {result}."}, 201 if result == "created" else 200
-            )
+        if result == "created":
+            return format_response({"message": "Reaction created."}, 201)
+        if result == "deleted":
+            return format_response({"message": "Reaction removed."}, 200)
         return format_response({"message": "Failed to save reaction."}, 500)
 
     def delete(self):

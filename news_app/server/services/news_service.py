@@ -84,8 +84,7 @@ class NewsService:
 
             try:
                 headlines = client.fetch_top_headlines(category)
-            except Exception as err:
-                print(f"[NewsService] {source.name} error: {err}")
+            except Exception:
                 continue
 
             for article in headlines:
@@ -188,7 +187,16 @@ class NewsService:
         )
 
     def react_to_article(self, user_id: int, article_id: int, is_like: bool) -> str:
-        return self.likes_repo.upsert_reaction(user_id, article_id, is_like)
+        current = self.likes_repo.get_user_reaction(user_id, article_id)
+        if current is None:
+            return self.likes_repo.upsert_reaction(user_id, article_id, is_like)
+        if current == is_like:
+            return self._delete_reaction_and_return(user_id, article_id)
+        return self._delete_reaction_and_return(user_id, article_id)
+
+    def _delete_reaction_and_return(self, user_id: int, article_id: int) -> str:
+        status = self.likes_repo.delete_reaction(user_id, article_id)
+        return "deleted" if status in ("deleted", "not_found") else status
 
     def remove_reaction(self, user_id: int, article_id: int) -> str:
         return self.likes_repo.delete_reaction(user_id, article_id)
