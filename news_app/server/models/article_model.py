@@ -13,3 +13,6 @@ class Article:
     published_at: datetime
     source_id: int
     category_id: int
+    is_hidden: bool = False
+    category_name: Optional[str] = None
+    updated_at: Optional[datetime] = None

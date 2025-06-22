@@ -2,13 +2,14 @@ from flask import session, request
 from flask_restx import Namespace, Resource, fields
 from server.services.user_service import UserService
 from server.repository.user_repository import UserRepository
+from server.repository.report_repository import ReportRepository
 from server.utils.response_formatter import format_response
-from server.repository.db_connector import db
+from server.repository.db_connector import DBConnector
 from server.utils.auth import require_role
 
-user_service = UserService(UserRepository(db))
+db = DBConnector()
+user_service = UserService(UserRepository(db), ReportRepository(db))
 api = Namespace("user", description="User operations")
-
 
 register_model = api.model(
     "RegisterUser",
@@ -117,3 +118,64 @@ class UserList(Resource):
             for u in users
         ]
         return format_response(users_data, status_code=200)
+
+
+@api.route("/my-reports")
+class MyReports(Resource):
+    def get(self):
+        header_uid = request.headers.get("X-User-ID")
+        if not header_uid:
+            return format_response(
+                None, success=False, message="Not logged in", status_code=401
+            )
+        try:
+            user_id = int(header_uid)
+        except ValueError:
+            return format_response(
+                None, success=False, message="Invalid user ID", status_code=400
+            )
+        reports = user_service.get_user_reports(user_id)
+        if reports is None:
+            return format_response([], message="No reports found", status_code=200)
+
+        def serialize_report(report):
+            d = report.__dict__.copy()
+            if d.get("created_at") and hasattr(d["created_at"], "isoformat"):
+                d["created_at"] = d["created_at"].isoformat()
+            return d
+
+        return format_response([serialize_report(r) for r in reports], status_code=200)
+
+    def delete(self):
+        header_uid = request.headers.get("X-User-ID")
+        if not header_uid:
+            return format_response(
+                None, success=False, message="Not logged in", status_code=401
+            )
+        try:
+            user_id = int(header_uid)
+        except ValueError:
+            return format_response(
+                None, success=False, message="Invalid user ID", status_code=400
+            )
+        data = request.get_json() or {}
+        article_id = data.get("article_id")
+        if not article_id:
+            return format_response(
+                None, success=False, message="article_id is required", status_code=400
+            )
+        try:
+            article_id = int(article_id)
+        except ValueError:
+            return format_response(
+                None, success=False, message="Invalid article_id", status_code=400
+            )
+        success = user_service.remove_user_report(user_id, article_id)
+        if success:
+            return format_response(
+                None, message="Report removed successfully.", status_code=200
+            )
+        else:
+            return format_response(
+                None, success=False, message="Failed to remove report.", status_code=500
+            )

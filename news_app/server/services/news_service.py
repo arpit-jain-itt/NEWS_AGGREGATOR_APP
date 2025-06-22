@@ -1,15 +1,18 @@
 from typing import List, Optional, Literal
 from datetime import datetime
 from dateutil.parser import parse as parse_datetime
-
+from server.models.report_model import Report
 from server.repository.article_repository import ArticleRepository
 from server.repository.category_repository import CategoryRepository
 from server.repository.source_repository import SourceRepository
 from server.repository.viewed_article_repository import ViewedArticleRepository
 from server.repository.likes_dislikes_repository import LikesDislikesRepository
+from server.repository.keyword_filter_repository import KeywordFilterRepository
+from server.repository.report_repository import ReportRepository
+from server.models.article_model import Article
 from server.external_apis.newsapi_org import NewsApiOrgClient
 from server.external_apis.thenewsapi_com import TheNewsApiClient
-from server.models.article_model import Article
+from config.config import REPORT_THRESHOLD
 
 
 class NewsService:
@@ -23,15 +26,18 @@ class NewsService:
         source_repo: SourceRepository,
         viewed_repo: ViewedArticleRepository,
         likes_repo: LikesDislikesRepository,
+        keyword_repo: Optional[KeywordFilterRepository] = None,
+        report_repo: Optional[ReportRepository] = None,
     ):
         self.article_repo = article_repo
         self.category_repo = category_repo
         self.source_repo = source_repo
         self.viewed_repo = viewed_repo
         self.likes_repo = likes_repo
+        self.keyword_repo = keyword_repo
+        self.report_repo = report_repo
 
     def fetch_and_store_news(self) -> None:
-        # first go for newsapi, then thenewsapi
         all_sources = self.source_repo.get_all_sources()
         primary_source = next((s for s in all_sources if s.name == "News API"), None)
         secondary_source = next(
@@ -49,7 +55,7 @@ class NewsService:
             client=NewsApiOrgClient(),
             source=primary_source,
             categories=categories,
-            already_inserted=total_inserted,
+            total_to_fetch=self.MAX_ARTICLES,
         )
 
         if total_inserted < self.MAX_ARTICLES and secondary_source:
@@ -57,7 +63,7 @@ class NewsService:
                 client=TheNewsApiClient(),
                 source=secondary_source,
                 categories=categories,
-                already_inserted=total_inserted,
+                total_to_fetch=self.MAX_ARTICLES - total_inserted,
             )
 
         if total_inserted:
@@ -73,13 +79,12 @@ class NewsService:
         client,
         source,
         categories: List[str],
-        already_inserted: int,
+        total_to_fetch: int,
     ) -> int:
         inserted = 0
-        remaining = self.MAX_ARTICLES - already_inserted
 
         for category in categories:
-            if inserted >= remaining:
+            if inserted >= total_to_fetch:
                 break
 
             try:
@@ -88,7 +93,7 @@ class NewsService:
                 continue
 
             for article in headlines:
-                if inserted >= remaining:
+                if inserted >= total_to_fetch:
                     break
 
                 published_at = self._parse_ts(
@@ -96,6 +101,16 @@ class NewsService:
                     or article.get("published_at")
                     or article.get("date")
                 )
+
+                if self.keyword_repo:
+                    blocked_keywords = [
+                        k.keyword for k in self.keyword_repo.get_all_keywords()
+                    ]
+                    if any(
+                        bk.lower() in (article.get("title") or "").lower()
+                        for bk in blocked_keywords
+                    ):
+                        continue
 
                 self.article_repo.insert_article(
                     title=article.get("title"),
@@ -107,6 +122,7 @@ class NewsService:
                     content=article.get("content") or article.get("snippet"),
                 )
                 inserted += 1
+                break
 
         return inserted
 
@@ -133,7 +149,7 @@ class NewsService:
         cat_id = None
         if category_name:
             cat = self.category_repo.get_category_by_name(category_name)
-            if not cat:
+            if not cat or cat.is_hidden:
                 return []
             cat_id = cat.id
         return self.article_repo.search_articles(
@@ -143,6 +159,7 @@ class NewsService:
             end_date=None,
             limit=limit,
             offset=offset,
+            include_hidden=False,
         )
 
     def search_articles(
@@ -158,9 +175,14 @@ class NewsService:
         cat_id = None
         if category:
             cat = self.category_repo.get_category_by_name(category.strip())
-            if not cat:
+            if not cat or cat.is_hidden:
                 return []
             cat_id = cat.id
+
+        if self.keyword_repo:
+            blocked_keywords = [k.keyword for k in self.keyword_repo.get_all_keywords()]
+            if any(bk in keyword for bk in blocked_keywords):
+                return []
         return self.article_repo.search_articles(
             keyword=keyword,
             category_id=cat_id,
@@ -168,6 +190,7 @@ class NewsService:
             end_date=end_date,
             limit=limit,
             offset=offset,
+            include_hidden=False,
         )
 
     def mark_article_viewed(self, user_id: int, article_id: int) -> None:
@@ -183,7 +206,7 @@ class NewsService:
         self, user_id: int, limit: int = 20, offset: int = 0
     ) -> List[Article]:
         return self.article_repo.get_saved_articles_by_user(
-            user_id, limit=limit, offset=offset
+            user_id, limit=limit, offset=offset, include_hidden=False
         )
 
     def react_to_article(self, user_id: int, article_id: int, is_like: bool) -> str:
@@ -219,3 +242,21 @@ class NewsService:
             limit=limit,
             offset=offset,
         )
+
+    def report_article(self, user_id: int, article_id: int, reason: str) -> bool:
+        report = Report(
+            id=None,
+            user_id=user_id,
+            article_id=article_id,
+            reason=reason,
+            created_at=None,
+            status="pending",
+        )
+        success = self.report_repo.add_report(report)
+        if not success:
+            return False
+        count = self.report_repo.get_report_count(article_id)
+        if count >= REPORT_THRESHOLD:
+            self.article_repo.set_article_hidden(article_id, True)
+            self.report_repo.update_report_status(article_id, "auto-blocked")
+        return True

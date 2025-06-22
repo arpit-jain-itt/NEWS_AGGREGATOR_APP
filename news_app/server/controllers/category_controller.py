@@ -14,13 +14,18 @@ add_category_model = api.model(
 )
 
 
+def serialize_category(cat):
+    d = asdict(cat)
+    if d.get("updated_at"):
+        d["updated_at"] = d["updated_at"].isoformat()
+    return d
+
+
 @api.route("")
 class CategoryCollection(Resource):
     def get(self):
         categories = category_repo.get_all_categories()
-        data = []
-        for cat in categories:
-            data.append(asdict(cat))
+        data = [serialize_category(cat) for cat in categories]
         return format_response(data, status_code=200)
 
     @require_role("admin")

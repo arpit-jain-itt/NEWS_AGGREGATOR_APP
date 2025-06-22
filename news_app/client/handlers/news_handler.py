@@ -31,9 +31,14 @@ class NewsHandler:
             print("POST failed or server unavailable.")
             return None
 
-    def _delete(self, route: str):
+    def _delete(self, route: str, payload=None):
         try:
-            return requests.delete(f"{SERVER_URL}{route}", headers=self._headers())
+            if payload:
+                return requests.delete(
+                    f"{SERVER_URL}{route}", json=payload, headers=self._headers()
+                )
+            else:
+                return requests.delete(f"{SERVER_URL}{route}", headers=self._headers())
         except Exception:
             print("DELETE failed or server unavailable.")
             return None
@@ -54,15 +59,22 @@ class NewsHandler:
 
     def view_article(self, article: dict):
         self._render_article(article)
-
         article_id = article.get("id")
         if not article_id:
             print("Missing article ID.")
             return
+        self._article_action_menu(article_id)
 
-        self._post_json("/api/news/viewed", {"article_id": article_id})
+    def view_saved_article(self, article: dict):
+        self._render_article(article)
+        article_id = article.get("id")
+        if not article_id:
+            print("Missing article ID.")
+            return
+        self._saved_article_action_menu(article_id)
 
-        print("\nOptions:\n1. Save Article\n2. Like\n3. Dislike\n4. Go Back")
+    def _article_action_menu(self, article_id):
+        print("\nOptions:\n1. Save Article\n2. Like\n3. Dislike\n4. Report\n5. Go Back")
         choice = input("Choose an option: ").strip()
         if choice == "1":
             self._save_article(article_id)
@@ -70,15 +82,12 @@ class NewsHandler:
             self._react_to_article(article_id, True)
         elif choice == "3":
             self._react_to_article(article_id, False)
-
-    def view_saved_article(self, article: dict):
-        self._render_article(article)
-
-        article_id = article.get("id")
-        if not article_id:
-            print("Missing article ID.")
+        elif choice == "4":
+            self.report_article(article_id)
+        elif choice == "5":
             return
 
+    def _saved_article_action_menu(self, article_id):
         print("\nOptions:\n1. Remove from Saved\n2. Like\n3. Dislike\n4. Back")
         choice = input("Choose an option: ").strip()
         if choice == "1":
@@ -87,6 +96,8 @@ class NewsHandler:
             self._react_to_article(article_id, True)
         elif choice == "3":
             self._react_to_article(article_id, False)
+        elif choice == "4":
+            return
 
     def _react_to_article(self, article_id: int, is_like: bool):
         resp = self._post_json(
@@ -147,6 +158,28 @@ class NewsHandler:
             print("Article not found in saved list.")
         else:
             print(f"Failed to remove article ({resp.status_code}).")
+
+    def report_article(self, article_id: int):
+        reason = input("Enter reason for reporting this article: ").strip()
+        if not reason:
+            print("Reason is required.")
+            return
+        resp = self._post_json(
+            "/api/news/report",
+            {
+                "user_id": self.current_user["id"],
+                "article_id": article_id,
+                "reason": reason,
+            },
+        )
+        if resp is None:
+            return
+        if resp.status_code == 201:
+            print("Report submitted.")
+        elif resp.status_code == 500:
+            print("Failed to submit report.")
+        else:
+            print(f"Failed to report article (HTTP {resp.status_code}).")
 
     def list_news(self):
         categories = self._get_json("/api/categories", default=[])
@@ -357,3 +390,152 @@ class NewsHandler:
         self.paginate_and_display(
             "Disliked Articles", fetch, on_select=self.view_article
         )
+
+    def list_reported_articles(self):
+        reported = self._get_json("/api/admin/reported-articles", default=[])
+        if not reported:
+            print("No reported articles.")
+            return
+        print("\n--- Reported Articles ---")
+        for idx, item in enumerate(reported, 1):
+            print(
+                f"{idx}. Article ID: {item['article_id']} | Reports: {item['report_count']}"
+            )
+        choice = input("\nEnter number to manage article or 'b' to go back: ").strip()
+        if choice.lower() == "b":
+            return
+        if not choice.isdigit() or not (1 <= int(choice) <= len(reported)):
+            print("Invalid choice.")
+            return
+        article_id = reported[int(choice) - 1]["article_id"]
+        self.manage_reported_article(article_id)
+
+    def manage_reported_article(self, article_id):
+        article = self._get_json(f"/api/news/article/{article_id}", default=None)
+        if not article:
+            print("Failed to fetch article details.")
+            return
+
+        while True:
+            print(f"\nManaging Article ID: {article_id}")
+            print("1. Show Details")
+            print("2. Block (Hide) Article")
+            if article.get("is_hidden"):
+                print("3. Unblock (Unhide) Article")
+            print("4. Go Back")
+            choice = input("Choose an option: ").strip()
+            if choice == "1":
+                self._render_article(article)
+            elif choice == "2":
+                if article.get("is_hidden"):
+                    print("Article is already hidden.")
+                else:
+                    resp = self._post_json(f"/api/admin/hide-article/{article_id}")
+                    if resp and resp.status_code == 200:
+                        print("Article hidden (blocked).")
+                        article["is_hidden"] = True
+                    else:
+                        print("Failed to hide article.")
+            elif choice == "3" and article.get("is_hidden"):
+                resp = self._post_json(f"/api/admin/unhide-article/{article_id}")
+                if resp and resp.status_code == 200:
+                    print("Article unhidden (unblocked).")
+                    article["is_hidden"] = False
+                else:
+                    print("Failed to unhide article.")
+            elif choice == "4":
+                return
+            else:
+                print("Invalid choice.")
+
+    def list_blocked_articles(self):
+        blocked = self._get_json("/api/admin/blocked-articles", default=[])
+        if not blocked:
+            print("No blocked articles.")
+            return
+        print("\n--- Blocked Articles ---")
+        for idx, item in enumerate(blocked, 1):
+            print(f"{idx}. Article ID: {item['id']} | Title: {item['title']}")
+        choice = input("\nEnter number to manage article or 'b' to go back: ").strip()
+        if choice.lower() == "b":
+            return
+        if not choice.isdigit() or not (1 <= int(choice) <= len(blocked)):
+            print("Invalid choice.")
+            return
+        article_id = blocked[int(choice) - 1]["id"]
+        self.manage_blocked_article(article_id)
+
+    def manage_blocked_article(self, article_id):
+        article = self._get_json(f"/api/news/article/{article_id}", default=None)
+        if not article:
+            print("Failed to fetch article details.")
+            return
+
+        while True:
+            print(f"\nManaging Blocked Article ID: {article_id}")
+            print("1. Show Details")
+            print("2. Unblock (Unhide) Article")
+            print("3. Go Back")
+            choice = input("Choose an option: ").strip()
+            if choice == "1":
+                self._render_article(article)
+            elif choice == "2":
+                if not article.get("is_hidden"):
+                    print("Article is already unhidden.")
+                else:
+                    resp = self._post_json(f"/api/admin/unhide-article/{article_id}")
+                    if resp and resp.status_code == 200:
+                        print("Article unhidden (unblocked).")
+                        article["is_hidden"] = False
+                    else:
+                        print("Failed to unhide article.")
+            elif choice == "3":
+                return
+            else:
+                print("Invalid choice.")
+
+    def show_reported_article_details(self, article_id):
+        article = self._get_json(f"/api/news/article/{article_id}", default=None)
+        if not article:
+            print("Failed to fetch article details.")
+            return
+        self._render_article(article)
+        input("\nPress Enter to go back...")
+
+    def list_my_reported_articles(self):
+        reports = self._get_json("/api/users/my-reports", default=[])
+        if not reports:
+            print("You have not reported any articles.")
+            return
+        while True:
+            print("\n--- My Reported Articles ---")
+            for idx, report in enumerate(reports, 1):
+                print(
+                    f"{idx}. Article ID: {report['article_id']} | Reason: {report.get('reason', '')} | Reported At: {report.get('created_at', '')}"
+                )
+            choice = input(
+                "\nEnter number to view/unreport article or 'b' to go back: "
+            ).strip()
+            if choice.lower() == "b":
+                return
+            if not choice.isdigit() or not (1 <= int(choice) <= len(reports)):
+                print("Invalid choice.")
+                continue
+            article_id = reports[int(choice) - 1]["article_id"]
+            self.show_reported_article_details(article_id)
+            unreport = (
+                input("Do you want to unreport this article? (y/n): ").strip().lower()
+            )
+            if unreport == "y":
+                self.unreport_article(article_id)
+            break
+
+    def unreport_article(self, article_id):
+        resp = self._delete("/api/users/my-reports", payload={"article_id": article_id})
+        if resp is None:
+            print("Failed to connect to server.")
+            return
+        if resp.status_code == 200:
+            print("Report removed successfully.")
+        else:
+            print("Failed to remove report.")

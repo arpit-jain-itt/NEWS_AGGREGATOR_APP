@@ -4,8 +4,9 @@ from datetime import datetime
 
 
 @dataclass
-class Category:
-    id: int
-    name: str
-    is_hidden: bool = False
+class KeywordFilter:
+    id: Optional[int]
+    keyword: str
+    active: bool = True
+    created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

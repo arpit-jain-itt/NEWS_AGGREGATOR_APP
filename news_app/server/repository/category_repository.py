@@ -7,11 +7,15 @@ class CategoryRepository:
     def __init__(self, db: DBConnector):
         self.db = db
 
-    def get_all_categories(self) -> List[Category]:
+    def get_all_categories(self, include_hidden: bool = False) -> List[Category]:
         conn = self.db.connect()
         cursor = conn.cursor(dictionary=True)
         try:
-            cursor.execute("SELECT * FROM categories ORDER BY name")
+            query = "SELECT * FROM categories"
+            if not include_hidden:
+                query += " WHERE is_hidden = FALSE"
+            query += " ORDER BY name"
+            cursor.execute(query)
             rows = cursor.fetchall()
             return [Category(**row) for row in rows]
         finally:
@@ -70,6 +74,22 @@ class CategoryRepository:
             return cursor.rowcount > 0
         except Exception as ex:
             print(f"Error deleting category: {ex}")
+            return False
+        finally:
+            cursor.close()
+
+    def set_category_hidden(self, category_id: int, is_hidden: bool) -> bool:
+        try:
+            conn = self.db.connect()
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE categories SET is_hidden = %s WHERE id = %s",
+                (is_hidden, category_id),
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+        except Exception as ex:
+            print(f"Error updating category hidden status: {ex}")
             return False
         finally:
             cursor.close()

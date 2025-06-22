@@ -30,7 +30,8 @@ def user_menu():
     print("5. View Liked Articles")
     print("6. View Disliked Articles")
     print("7. Notifications Settings")
-    print("8. Logout")
+    print("8. My Reported Articles")
+    print("9. Logout")
     return input("Choose an option: ").strip()
 
 
@@ -41,7 +42,9 @@ def admin_menu():
     print("3. View News")
     print("4. News Category Management")
     print("5. Notifications Settings")
-    print("6. Logout")
+    print("6. View Reported Articles")
+    print("7. View Blocked Articles")
+    print("8. Logout")
     return input("Choose an option: ").strip()
 
 
@@ -88,6 +91,10 @@ def run():
                     elif choice == "5":
                         notifications.manage_notifications()
                     elif choice == "6":
+                        news.list_reported_articles()
+                    elif choice == "7":
+                        news.list_blocked_articles()
+                    elif choice == "8":
                         auth.logout()
                         news = notifications = search = None
                     else:
@@ -115,6 +122,8 @@ def run():
                     elif choice == "7":
                         notifications.manage_notifications()
                     elif choice == "8":
+                        news.list_my_reported_articles()
+                    elif choice == "9":
                         auth.logout()
                         news = notifications = search = None
                     else:

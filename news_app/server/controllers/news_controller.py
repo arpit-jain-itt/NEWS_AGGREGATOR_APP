@@ -7,10 +7,12 @@ from server.repository.category_repository import CategoryRepository
 from server.repository.source_repository import SourceRepository
 from server.repository.viewed_article_repository import ViewedArticleRepository
 from server.repository.likes_dislikes_repository import LikesDislikesRepository
+from server.repository.report_repository import ReportRepository
 from server.utils.response_formatter import format_response
 from server.repository.db_connector import db
 
 api = Namespace("news", description="News operations")
+
 
 news_service = NewsService(
     ArticleRepository(db),
@@ -18,6 +20,7 @@ news_service = NewsService(
     SourceRepository(db),
     ViewedArticleRepository(db),
     LikesDislikesRepository(db),
+    report_repo=ReportRepository(db),
 )
 
 
@@ -331,3 +334,72 @@ class ArticleReactionCounts(Resource):
         if counts is None:
             return format_response({"message": "Article not found."}, 404)
         return format_response(counts, 200)
+
+
+@api.route("/report")
+class ReportArticle(Resource):
+    def post(self):
+        data = flask.request.get_json()
+        if not data or {"user_id", "article_id", "reason"} - data.keys():
+            return format_response(
+                None,
+                success=False,
+                message="user_id, article_id, and reason are required",
+                status_code=400,
+            )
+        try:
+            user_id = int(data["user_id"])
+            article_id = int(data["article_id"])
+            reason = str(data["reason"])
+        except Exception:
+            return format_response(
+                None,
+                success=False,
+                message="Invalid data types for user_id or article_id.",
+                status_code=400,
+            )
+        try:
+            success = news_service.report_article(user_id, article_id, reason)
+            if success:
+                return format_response(
+                    None, message="Report submitted.", status_code=201
+                )
+            else:
+                return format_response(
+                    None, message="Failed to submit report.", status_code=500
+                )
+        except Exception as ex:
+            print("ERROR in /report:", ex)
+            import traceback
+
+            traceback.print_exc()
+            return format_response(None, message=f"Error: {ex}", status_code=500)
+
+
+@api.route("/article/<int:article_id>")
+class ArticleDetails(Resource):
+    def get(self, article_id):
+        article = news_service.article_repo.get_article_by_id(
+            article_id, include_hidden=True
+        )
+        if not article:
+            return format_response(
+                None, success=False, message="Article not found", status_code=404
+            )
+        return format_response(
+            {
+                "id": article.id,
+                "title": article.title,
+                "description": article.description,
+                "content": article.content,
+                "url": article.url,
+                "published_at": (
+                    article.published_at.isoformat() if article.published_at else None
+                ),
+                "source_id": article.source_id,
+                "category_id": article.category_id,
+                "is_hidden": article.is_hidden,
+                "category_name": getattr(article, "category_name", None),
+            },
+            status_code=200,
+        )
