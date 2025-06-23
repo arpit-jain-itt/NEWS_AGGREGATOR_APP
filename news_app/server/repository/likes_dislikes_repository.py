@@ -134,3 +134,22 @@ class LikesDislikesRepository:
             setattr(article, "category_name", category_name)
             articles.append(article)
         return articles
+
+    def get_article_reactions_count(self, article_id: int) -> dict:
+        query = """
+            SELECT is_like, COUNT(*) as count
+            FROM likes_dislikes
+            WHERE article_id = %s
+            GROUP BY is_like
+        """
+        conn = self.db.connect()
+        with conn.cursor(dictionary=True) as cursor:
+            cursor.execute(query, (article_id,))
+            rows = cursor.fetchall()
+        summary = {"likes": 0, "dislikes": 0}
+        for row in rows:
+            if row["is_like"]:
+                summary["likes"] = row["count"]
+            else:
+                summary["dislikes"] = row["count"]
+        return summary

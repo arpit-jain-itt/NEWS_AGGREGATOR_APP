@@ -16,7 +16,8 @@ def create_app() -> Flask:
 
     # test auth for swagger
     authorizations = {
-        "Bearer Auth": {"type": "apiKey", "in": "header", "name": "Authorization"}
+        "Bearer Auth": {"type": "apiKey", "in": "header", "name": "Authorization"},
+        "User ID": {"type": "apiKey", "in": "header", "name": "X-User-ID"},
     }
 
     api = Api(
@@ -26,7 +27,7 @@ def create_app() -> Flask:
         description="API for News Aggregator",
         doc="/swagger",
         authorizations=authorizations,
-        security="Bearer Auth",
+        security=["Bearer Auth", "User ID"],
     )
 
     api.add_namespace(user_ns, path="/api/users")

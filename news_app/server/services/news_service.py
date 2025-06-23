@@ -260,3 +260,6 @@ class NewsService:
             self.article_repo.set_article_hidden(article_id, True)
             self.report_repo.update_report_status(article_id, "auto-blocked")
         return True
+
+    def get_article_reactions_count(self, article_id: int) -> dict:
+        return self.likes_repo.get_article_reactions_count(article_id)
