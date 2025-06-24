@@ -106,10 +106,8 @@ class NewsService:
                     blocked_keywords = [
                         k.keyword for k in self.keyword_repo.get_all_keywords()
                     ]
-                    if any(
-                        bk.lower() in (article.get("title") or "").lower()
-                        for bk in blocked_keywords
-                    ):
+                    text = f"{article.get('title', '')} {article.get('description', '')} {article.get('content', '')}".lower()
+                    if any(bk.lower() in text for bk in blocked_keywords):
                         continue
 
                 self.article_repo.insert_article(
@@ -140,6 +138,22 @@ class NewsService:
         # go to general category if not match with any other ones
         return self.category_repo.get_general_category().id
 
+    def _filter_blocked_keywords(self, articles: List[Article]) -> List[Article]:
+        if not self.keyword_repo:
+            return articles
+        blocked_keywords = [
+            k.keyword.lower() for k in self.keyword_repo.get_all_keywords()
+        ]
+        print("DEBUG: Blocked keywords in filter:", blocked_keywords)
+        filtered = []
+        for article in articles:
+            text = f"{article.title or ''} {article.description or ''} {article.content or ''}".lower()
+            if any(bk in text for bk in blocked_keywords):
+                print(f"DEBUG: Article blocked: {article.title}")
+            if not any(bk in text for bk in blocked_keywords):
+                filtered.append(article)
+        return filtered
+
     def get_latest_articles(
         self,
         category_name: Optional[str] = None,
@@ -152,7 +166,7 @@ class NewsService:
             if not cat or cat.is_hidden:
                 return []
             cat_id = cat.id
-        return self.article_repo.search_articles(
+        articles = self.article_repo.search_articles(
             keyword="",
             category_id=cat_id,
             start_date=None,
@@ -161,6 +175,7 @@ class NewsService:
             offset=offset,
             include_hidden=False,
         )
+        return self._filter_blocked_keywords(articles)
 
     def search_articles(
         self,
@@ -179,11 +194,7 @@ class NewsService:
                 return []
             cat_id = cat.id
 
-        if self.keyword_repo:
-            blocked_keywords = [k.keyword for k in self.keyword_repo.get_all_keywords()]
-            if any(bk in keyword for bk in blocked_keywords):
-                return []
-        return self.article_repo.search_articles(
+        articles = self.article_repo.search_articles(
             keyword=keyword,
             category_id=cat_id,
             start_date=start_date,
@@ -192,6 +203,7 @@ class NewsService:
             offset=offset,
             include_hidden=False,
         )
+        return self._filter_blocked_keywords(articles)
 
     def mark_article_viewed(self, user_id: int, article_id: int) -> None:
         self.viewed_repo.mark_viewed(user_id, article_id)
@@ -205,9 +217,10 @@ class NewsService:
     def get_saved_articles_by_user(
         self, user_id: int, limit: int = 20, offset: int = 0
     ) -> List[Article]:
-        return self.article_repo.get_saved_articles_by_user(
+        articles = self.article_repo.get_saved_articles_by_user(
             user_id, limit=limit, offset=offset, include_hidden=False
         )
+        return self._filter_blocked_keywords(articles)
 
     def react_to_article(self, user_id: int, article_id: int, is_like: bool) -> str:
         current = self.likes_repo.get_user_reaction(user_id, article_id)
@@ -236,12 +249,13 @@ class NewsService:
         offset: int = 0,
     ) -> List[Article]:
         is_like = reaction_type == "like"
-        return self.likes_repo.get_reacted_articles(
+        articles = self.likes_repo.get_reacted_articles(
             user_id=user_id,
             is_like=is_like,
             limit=limit,
             offset=offset,
         )
+        return self._filter_blocked_keywords(articles)
 
     def report_article(self, user_id: int, article_id: int, reason: str) -> bool:
         report = Report(

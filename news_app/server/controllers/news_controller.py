@@ -8,6 +8,7 @@ from server.repository.source_repository import SourceRepository
 from server.repository.viewed_article_repository import ViewedArticleRepository
 from server.repository.likes_dislikes_repository import LikesDislikesRepository
 from server.repository.report_repository import ReportRepository
+from server.repository.keyword_filter_repository import KeywordFilterRepository
 from server.utils.response_formatter import format_response
 from server.repository.db_connector import db
 
@@ -20,6 +21,7 @@ news_service = NewsService(
     SourceRepository(db),
     ViewedArticleRepository(db),
     LikesDislikesRepository(db),
+    keyword_repo=KeywordFilterRepository(db),
     report_repo=ReportRepository(db),
 )
 

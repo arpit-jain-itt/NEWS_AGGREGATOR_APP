@@ -23,6 +23,7 @@ news_service = NewsService(
     SourceRepository(db),
     ViewedArticleRepository(db),
     LikesDislikesRepository(db),
+    keyword_repo=KeywordFilterRepository(db),
     report_repo=ReportRepository(db),
 )
 
@@ -203,7 +204,16 @@ class KeywordList(Resource):
     @require_role("admin")
     def get(self):
         keywords = admin_service.get_all_keywords(active_only=False)
-        return {"data": [asdict(k) for k in keywords]}, 200
+
+        def serialize_keyword(k):
+            d = asdict(k)
+            if d.get("created_at") and hasattr(d["created_at"], "isoformat"):
+                d["created_at"] = d["created_at"].isoformat()
+            if d.get("updated_at") and hasattr(d["updated_at"], "isoformat"):
+                d["updated_at"] = d["updated_at"].isoformat()
+            return d
+
+        return {"data": [serialize_keyword(k) for k in keywords]}, 200
 
     @require_role("admin")
     def post(self):

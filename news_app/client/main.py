@@ -44,7 +44,8 @@ def admin_menu():
     print("5. Notifications Settings")
     print("6. View Reported Articles")
     print("7. View Blocked Articles")
-    print("8. Logout")
+    print("8. Manage Blocked Keywords")
+    print("9. Logout")
     return input("Choose an option: ").strip()
 
 
@@ -95,6 +96,8 @@ def run():
                     elif choice == "7":
                         news.list_blocked_articles()
                     elif choice == "8":
+                        news.manage_keywords()
+                    elif choice == "9":
                         auth.logout()
                         news = notifications = search = None
                     else:
