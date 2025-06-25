@@ -315,17 +315,37 @@ class NewsHandler:
             print("Error removing source.")
 
     def manage_categories(self):
-        options = {"1": self._add_category, "2": self._delete_category}
+        options = {
+            "1": self.list_categories,
+            "2": self._add_category,
+            "3": self._hide_category,
+            "4": self._unhide_category,
+        }
         while True:
-            print("\n--- Manage Categories ---\n1. Add\n2. Delete\n3. Back")
+            print("\n--- Manage Categories ---")
+            print("1. List")
+            print("2. Add")
+            print("3. Hide")
+            print("4. Unhide")
+            print("5. Back")
             choice = input("Select: ").strip()
-            if choice == "3":
+            if choice == "5":
                 break
             action = options.get(choice)
             if action:
                 action()
             else:
                 print("Invalid option.")
+
+    def list_categories(self):
+        categories = self._get_json("/api/categories/admin/categories", default=[])
+        if not categories:
+            print("No categories.")
+            return
+        print("\nCategories:")
+        for cat in categories:
+            status = "Hidden" if cat.get("is_hidden") else "Visible"
+            print(f"{cat['id']}: {cat['name']} [{status}]")
 
     def _add_category(self):
         name = input("\nNew category name: ").strip()
@@ -342,22 +362,29 @@ class NewsHandler:
         else:
             print(f"Failed to add category (HTTP {resp.status_code}).")
 
-    def _delete_category(self):
-        categories = self._get_json("/api/categories", default=[])
-        if not categories:
-            print("No categories.")
-            return
-        for cat in categories:
-            print(f"{cat['id']}: {cat['name']}")
-        cat_id = input("\nCategory ID to delete: ").strip()
+    def _hide_category(self):
+        self.list_categories()
+        cat_id = input("\nCategory ID to hide: ").strip()
         if not cat_id.isdigit():
             print("Invalid ID.")
             return
-        resp = self._delete(f"/api/categories/{cat_id}")
+        resp = self._post_json(f"/api/admin/hide-category/{cat_id}")
         if resp and resp.status_code == 200:
-            print("Deleted.")
+            print("Category hidden.")
         else:
-            print("Failed to delete.")
+            print("Failed to hide category.")
+
+    def _unhide_category(self):
+        self.list_categories()
+        cat_id = input("\nCategory ID to unhide: ").strip()
+        if not cat_id.isdigit():
+            print("Invalid ID.")
+            return
+        resp = self._post_json(f"/api/admin/unhide-category/{cat_id}")
+        if resp and resp.status_code == 200:
+            print("Category unhidden.")
+        else:
+            print("Failed to unhide category.")
 
     def list_liked_articles(self):
         def fetch(limit, offset):

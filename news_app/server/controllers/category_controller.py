@@ -63,3 +63,12 @@ class CategoryItem(Resource):
             message="Category not found or could not be deleted",
             status_code=404,
         )
+
+
+@api.route("/admin/categories")
+class AdminCategoryList(Resource):
+    @require_role("admin")
+    def get(self):
+        categories = category_repo.get_all_categories(include_hidden=True)
+        data = [serialize_category(cat) for cat in categories]
+        return format_response(data, status_code=200)
