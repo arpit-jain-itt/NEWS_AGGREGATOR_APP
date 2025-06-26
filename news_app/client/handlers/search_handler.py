@@ -1,51 +1,11 @@
-import requests
 from dateutil.parser import parse as parse_datetime
 from client.utils.pagination_helper import cli_paginate_items
-
-SERVER_URL = "http://localhost:5000"
+from client.utils.helpers import get_json, print_article_row, print_article_details
 
 
 class SearchHandler:
     def __init__(self, current_user: dict):
         self.current_user = current_user
-
-    @staticmethod
-    def _extract_data(resp: requests.Response, default):
-        try:
-            return resp.json().get("data", default)
-        except ValueError:
-            return default
-
-    def _get_json(self, route: str, params=None, default=None):
-        try:
-            resp = requests.get(f"{SERVER_URL}{route}", params=params or {})
-            return self._extract_data(resp, default)
-        except requests.exceptions.ConnectionError:
-            print("Server is not running.")
-            return default
-
-    @staticmethod
-    def _print_article_row(article: dict, idx: int):
-        if not isinstance(article, dict):
-            print(f"{idx}. [No data]")
-            return
-        title = article.get("title", "[No Title]")
-        published = article.get("published_at", "N/A")
-        print(f"{idx}. {title} ({published})")
-
-    @staticmethod
-    def _print_article_details(article: dict):
-        print("\n--- Article Details ---")
-        for label, field in (
-            ("Title", "title"),
-            ("Published At", "published_at"),
-            ("Category", "category_name"),
-            ("Description", "description"),
-            ("Content", "content"),
-            ("URL", "url"),
-        ):
-            print(f"{label}: {article.get(field, 'N/A')}")
-        print()
 
     def search_articles(self):
         print("\n--- Search Articles ---")
@@ -93,12 +53,12 @@ class SearchHandler:
                 params["start_date"] = start_date
             if end_date:
                 params["end_date"] = end_date
-            return self._get_json("/api/news/search", params=params, default=[])
+            return get_json("/api/news/search", params=params, default=[])
 
         cli_paginate_items(
             fetch_fn=fetch_fn,
             title="Search Results",
             per_page=10,
-            on_select=self._print_article_details,
-            display_fn=self._print_article_row,
+            on_select=print_article_details,
+            display_fn=print_article_row,
         )

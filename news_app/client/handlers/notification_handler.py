@@ -1,7 +1,5 @@
-import requests
 from client.utils.validators import validate_categories
-
-SERVER_URL = "http://localhost:5000"
+from client.utils.helpers import get_json, post_json
 
 
 class NotificationHandler:
@@ -63,37 +61,19 @@ class NotificationHandler:
             "enabled": new_enabled,
         }
 
-        try:
-            r = requests.post(
-                f"{SERVER_URL}/api/notifications/preferences", json=payload
-            )
-            if r.ok:
-                print("Notification preferences updated successfully.")
-            else:
-                print("Failed to update notification preferences.")
-        except requests.exceptions.ConnectionError:
-            print("Server is not running.")
+        resp = post_json("/api/notifications/preferences", payload=payload)
+        if resp and resp.ok:
+            print("Notification preferences updated successfully.")
+        else:
+            print("Failed to update notification preferences.")
 
     def _fetch_user_notification(self):
-        try:
-            r = requests.get(
-                f"{SERVER_URL}/api/notifications/preferences",
-                params={"user_id": self.current_user["id"]},
-            )
-            if r.status_code == 200:
-                return r.json().get("data", {})
-            if r.status_code == 404:
-                return {}
-            return None
-        except requests.exceptions.ConnectionError:
-            print("Server is not running.")
-            return None
+        data = get_json(
+            "/api/notifications/preferences",
+            params={"user_id": self.current_user["id"]},
+            default=None,
+        )
+        return data if data is not None else {}
 
     def _fetch_categories(self):
-        try:
-            r = requests.get(f"{SERVER_URL}/api/categories")
-            if r.status_code == 200:
-                return r.json().get("data", [])
-        except requests.exceptions.ConnectionError:
-            pass
-        return []
+        return get_json("/api/categories", default=[])

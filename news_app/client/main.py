@@ -1,7 +1,11 @@
 import sys
 import requests
 from client.handlers.auth_handler import AuthHandler
-from client.handlers.news_handler import NewsHandler
+from client.handlers.news_article_handler import NewsArticleHandler
+from client.handlers.news_source_handler import NewsSourceHandler
+from client.handlers.news_category_handler import NewsCategoryHandler
+from client.handlers.news_reporting_handler import NewsReportingHandler
+from client.handlers.news_keyword_handler import NewsKeywordHandler
 from client.handlers.notification_handler import NotificationHandler
 from client.handlers.search_handler import SearchHandler
 
@@ -57,7 +61,9 @@ def run():
         sys.exit(1)
 
     auth = AuthHandler()
-    news = notifications = search = None
+    news_article = news_source = news_category = news_reporting = news_keyword = (
+        notifications
+    ) = search = None
 
     try:
         while True:
@@ -66,7 +72,11 @@ def run():
                 if choice == "1":
                     user = auth.login()
                     if user:
-                        news = NewsHandler(user)
+                        news_article = NewsArticleHandler(user)
+                        news_source = NewsSourceHandler(user)
+                        news_category = NewsCategoryHandler(user)
+                        news_reporting = NewsReportingHandler(user)
+                        news_keyword = NewsKeywordHandler(user)
                         notifications = NotificationHandler(user)
                         search = SearchHandler(user)
                 elif choice == "2":
@@ -84,32 +94,34 @@ def run():
                     if choice == "1":
                         auth.manage_users()
                     elif choice == "2":
-                        news.manage_sources()
+                        news_source.manage_sources()
                     elif choice == "3":
-                        news.list_news()
+                        news_article.list_news()
                     elif choice == "4":
-                        news.manage_categories()
+                        news_category.manage_categories()
                     elif choice == "5":
                         notifications.manage_notifications()
                     elif choice == "6":
-                        news.list_reported_articles()
+                        news_reporting.list_reported_articles()
                     elif choice == "7":
-                        news.list_blocked_articles()
+                        news_reporting.list_blocked_articles()
                     elif choice == "8":
-                        news.manage_keywords()
+                        news_keyword.manage_keywords()
                     elif choice == "9":
                         auth.logout()
-                        news = notifications = search = None
+                        news_article = news_source = news_category = news_reporting = (
+                            news_keyword
+                        ) = notifications = search = None
                     else:
                         print("Invalid choice. Please try again.")
                 # User Menu
                 else:
                     choice = user_menu()
                     if choice == "1":
-                        news.view_headlines()
+                        news_article.view_headlines()
                     elif choice == "2":
                         try:
-                            news.list_news()
+                            news_article.list_news()
                         except TypeError as e:
                             print(f"\nCategory error: {e}")
                         except Exception as e:
@@ -117,18 +129,20 @@ def run():
                     elif choice == "3":
                         search.search_articles()
                     elif choice == "4":
-                        news.list_saved_articles()
+                        news_article.list_saved_articles()
                     elif choice == "5":
-                        news.list_liked_articles()
+                        news_article.list_liked_articles()
                     elif choice == "6":
-                        news.list_disliked_articles()
+                        news_article.list_disliked_articles()
                     elif choice == "7":
                         notifications.manage_notifications()
                     elif choice == "8":
-                        news.list_my_reported_articles()
+                        news_reporting.list_my_reported_articles()
                     elif choice == "9":
                         auth.logout()
-                        news = notifications = search = None
+                        news_article = news_source = news_category = news_reporting = (
+                            news_keyword
+                        ) = notifications = search = None
                     else:
                         print("Invalid choice. Please try again.")
     except KeyboardInterrupt:

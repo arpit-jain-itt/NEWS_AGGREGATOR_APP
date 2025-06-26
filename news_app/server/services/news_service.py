@@ -144,7 +144,6 @@ class NewsService:
         blocked_keywords = [
             k.keyword.lower() for k in self.keyword_repo.get_all_keywords()
         ]
-        print("DEBUG: Blocked keywords in filter:", blocked_keywords)
         filtered = []
         for article in articles:
             text = f"{article.title or ''} {article.description or ''} {article.content or ''}".lower()
