@@ -15,41 +15,53 @@ class UserRepository:
 
     def get_user_by_id(self, user_id: int) -> Optional[User]:
         conn = self.db.connect()
-        query = "SELECT * FROM users WHERE id = %s"
-        with with_cursor(conn, dictionary=True) as cursor:
-            cursor.execute(query, (user_id,))
-            row = cursor.fetchone()
-        return row_to_model(row, User)
+        try:
+            query = "SELECT * FROM users WHERE id = %s"
+            with with_cursor(conn, dictionary=True) as cursor:
+                cursor.execute(query, (user_id,))
+                row = cursor.fetchone()
+            return row_to_model(row, User)
+        finally:
+            conn.close()
 
     def get_user_by_email(self, email: str) -> Optional[User]:
         conn = self.db.connect()
-        query = "SELECT * FROM users WHERE email = %s"
-        with with_cursor(conn, dictionary=True) as cursor:
-            cursor.execute(query, (email,))
-            row = cursor.fetchone()
-        return row_to_model(row, User)
+        try:
+            query = "SELECT * FROM users WHERE email = %s"
+            with with_cursor(conn, dictionary=True) as cursor:
+                cursor.execute(query, (email,))
+                row = cursor.fetchone()
+            return row_to_model(row, User)
+        finally:
+            conn.close()
 
     def create_user(
         self, username: str, email: str, password_hash: str, is_admin=False
     ) -> int:
         conn = self.db.connect()
-        query = """
-            INSERT INTO users (username, email, password_hash, is_admin)
-            VALUES (%s, %s, %s, %s)
-        """
-        with with_cursor(conn) as cursor:
-            cursor.execute(query, (username, email, password_hash, is_admin))
-            conn.commit()
-            user_id = cursor.lastrowid
-        return user_id
+        try:
+            query = """
+                INSERT INTO users (username, email, password_hash, is_admin)
+                VALUES (%s, %s, %s, %s)
+            """
+            with with_cursor(conn) as cursor:
+                cursor.execute(query, (username, email, password_hash, is_admin))
+                conn.commit()
+                user_id = cursor.lastrowid
+            return user_id
+        finally:
+            conn.close()
 
     def get_all_users(self) -> List[User]:
         conn = self.db.connect()
-        query = "SELECT * FROM users"
-        with with_cursor(conn, dictionary=True) as cursor:
-            cursor.execute(query)
-            rows = cursor.fetchall()
-        return rows_to_models(rows, User)
+        try:
+            query = "SELECT * FROM users"
+            with with_cursor(conn, dictionary=True) as cursor:
+                cursor.execute(query)
+                rows = cursor.fetchall()
+            return rows_to_models(rows, User)
+        finally:
+            conn.close()
 
     def delete_user(self, user_id: int) -> bool:
         conn = self.db.connect()
@@ -61,4 +73,7 @@ class UserRepository:
                 conn.commit()
                 return cursor.rowcount > 0
 
-        return safe_execute(do_delete, default=False)
+        try:
+            return safe_execute(do_delete, default=False)
+        finally:
+            conn.close()

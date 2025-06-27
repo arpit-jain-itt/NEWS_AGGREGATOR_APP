@@ -29,6 +29,8 @@ class LikesDislikesRepository:
             return "updated"
         except Exception:
             return "error"
+        finally:
+            conn.close()
 
     def delete_reaction(self, user_id: int, article_id: int) -> str:
         query = "DELETE FROM likes_dislikes WHERE user_id = %s AND article_id = %s"
@@ -38,6 +40,8 @@ class LikesDislikesRepository:
             return "deleted" if affected else "not_found"
         except Exception:
             return "error"
+        finally:
+            conn.close()
 
     def remove_like(self, user_id: int, article_id: int) -> str:
         return self._remove_specific_reaction(user_id, article_id, True)
@@ -49,10 +53,16 @@ class LikesDislikesRepository:
         query = (
             "SELECT is_like FROM likes_dislikes WHERE user_id = %s AND article_id = %s"
         )
-        row = self._run_fetchone(query, (user_id, article_id))
-        if row is None:
-            return None
-        return bool(row[0])
+        conn = self.db.connect()
+        try:
+            with with_cursor(conn) as cursor:
+                cursor.execute(query, (user_id, article_id))
+                row = cursor.fetchone()
+            if row is None:
+                return None
+            return bool(row[0])
+        finally:
+            conn.close()
 
     def get_reaction_summary(self, user_id: int) -> Tuple[int, int]:
         query = """
@@ -62,9 +72,15 @@ class LikesDislikesRepository:
             FROM likes_dislikes
             WHERE user_id = %s
         """
-        row = self._run_fetchone(query, (user_id,))
-        likes, dislikes = row if row else (0, 0)
-        return likes or 0, dislikes or 0
+        conn = self.db.connect()
+        try:
+            with with_cursor(conn) as cursor:
+                cursor.execute(query, (user_id,))
+                row = cursor.fetchone()
+            likes, dislikes = row if row else (0, 0)
+            return likes or 0, dislikes or 0
+        finally:
+            conn.close()
 
     def get_reacted_articles(
         self,
@@ -84,10 +100,13 @@ class LikesDislikesRepository:
             LIMIT %s OFFSET %s
         """
         conn = self.db.connect()
-        with with_cursor(conn, dictionary=True) as cursor:
-            cursor.execute(query, (user_id, is_like, limit, offset))
-            rows = cursor.fetchall()
-        return self._build_articles(rows)
+        try:
+            with with_cursor(conn, dictionary=True) as cursor:
+                cursor.execute(query, (user_id, is_like, limit, offset))
+                rows = cursor.fetchall()
+            return self._build_articles(rows)
+        finally:
+            conn.close()
 
     def _remove_specific_reaction(
         self, user_id: int, article_id: int, is_like: bool
@@ -102,6 +121,8 @@ class LikesDislikesRepository:
             return "deleted" if affected else "not_found"
         except Exception:
             return "error"
+        finally:
+            conn.close()
 
     def _run_write(self, conn, query: str, params: tuple) -> int:
         with with_cursor(conn) as cursor:
@@ -112,10 +133,13 @@ class LikesDislikesRepository:
 
     def _run_fetchone(self, query: str, params: tuple) -> Optional[Any]:
         conn = self.db.connect()
-        with with_cursor(conn) as cursor:
-            cursor.execute(query, params)
-            row = cursor.fetchone()
-        return row
+        try:
+            with with_cursor(conn) as cursor:
+                cursor.execute(query, params)
+                row = cursor.fetchone()
+            return row
+        finally:
+            conn.close()
 
     def _build_articles(self, rows: List[dict]) -> List[Article]:
         articles: List[Article] = []
@@ -134,13 +158,16 @@ class LikesDislikesRepository:
             GROUP BY is_like
         """
         conn = self.db.connect()
-        with with_cursor(conn, dictionary=True) as cursor:
-            cursor.execute(query, (article_id,))
-            rows = cursor.fetchall()
-        summary = {"likes": 0, "dislikes": 0}
-        for row in rows:
-            if row["is_like"]:
-                summary["likes"] = row["count"]
-            else:
-                summary["dislikes"] = row["count"]
-        return summary
+        try:
+            with with_cursor(conn, dictionary=True) as cursor:
+                cursor.execute(query, (article_id,))
+                rows = cursor.fetchall()
+            summary = {"likes": 0, "dislikes": 0}
+            for row in rows:
+                if row["is_like"]:
+                    summary["likes"] = row["count"]
+                else:
+                    summary["dislikes"] = row["count"]
+            return summary
+        finally:
+            conn.close()

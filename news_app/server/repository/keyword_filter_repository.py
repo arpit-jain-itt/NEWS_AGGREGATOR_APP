@@ -16,10 +16,13 @@ class KeywordFilterRepository:
 
         def do_add():
             conn = self.db.connect()
-            with with_cursor(conn) as cursor:
-                cursor.execute(query, (keyword,))
-                conn.commit()
-                return True
+            try:
+                with with_cursor(conn) as cursor:
+                    cursor.execute(query, (keyword,))
+                    conn.commit()
+                    return True
+            finally:
+                conn.close()
 
         return safe_execute(do_add, default=False)
 
@@ -28,20 +31,26 @@ class KeywordFilterRepository:
         if active_only:
             query += " WHERE active=TRUE"
         conn = self.db.connect()
-        with with_cursor(conn, dictionary=True) as cursor:
-            cursor.execute(query)
-            rows = cursor.fetchall()
-        return rows_to_models(rows, KeywordFilter)
+        try:
+            with with_cursor(conn, dictionary=True) as cursor:
+                cursor.execute(query)
+                rows = cursor.fetchall()
+            return rows_to_models(rows, KeywordFilter)
+        finally:
+            conn.close()
 
     def block_keyword(self, keyword: str) -> bool:
         query = "UPDATE keyword_filters SET active=FALSE WHERE keyword=%s"
 
         def do_block():
             conn = self.db.connect()
-            with with_cursor(conn) as cursor:
-                cursor.execute(query, (keyword,))
-                conn.commit()
-                return True
+            try:
+                with with_cursor(conn) as cursor:
+                    cursor.execute(query, (keyword,))
+                    conn.commit()
+                    return True
+            finally:
+                conn.close()
 
         return safe_execute(do_block, default=False)
 
@@ -50,10 +59,13 @@ class KeywordFilterRepository:
 
         def do_unblock():
             conn = self.db.connect()
-            with with_cursor(conn) as cursor:
-                cursor.execute(query, (keyword,))
-                conn.commit()
-                return True
+            try:
+                with with_cursor(conn) as cursor:
+                    cursor.execute(query, (keyword,))
+                    conn.commit()
+                    return True
+            finally:
+                conn.close()
 
         return safe_execute(do_unblock, default=False)
 
@@ -62,9 +74,12 @@ class KeywordFilterRepository:
 
         def do_delete():
             conn = self.db.connect()
-            with with_cursor(conn) as cursor:
-                cursor.execute(query, (keyword,))
-                conn.commit()
-                return True
+            try:
+                with with_cursor(conn) as cursor:
+                    cursor.execute(query, (keyword,))
+                    conn.commit()
+                    return True
+            finally:
+                conn.close()
 
         return safe_execute(do_delete, default=False)
