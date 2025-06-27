@@ -6,6 +6,10 @@ from server.repository.report_repository import ReportRepository
 from server.utils.response_formatter import format_response
 from server.repository.db_connector import DBConnector
 from server.utils.auth import require_role
+from server.utils.controller_helper import (
+    require_fields,
+    safe_int,
+)
 
 db = DBConnector()
 user_service = UserService(UserRepository(db), ReportRepository(db))
@@ -34,15 +38,13 @@ class Register(Resource):
     @api.expect(register_model)
     def post(self):
         data = api.payload
-        username = data.get("username")
-        email = data.get("email")
-        password = data.get("password")
-        if not all([username, email, password]):
-            return format_response(
-                None, success=False, message="Missing required fields", status_code=400
-            )
+        ok, err = require_fields(data or {}, ["username", "email", "password"])
+        if not ok:
+            return format_response(None, success=False, message=err, status_code=400)
 
-        user_id = user_service.register_user(username, email, password)
+        user_id = user_service.register_user(
+            data["username"], data["email"], data["password"]
+        )
         if user_id is None:
             return format_response(
                 None, success=False, message="Email already exists", status_code=400
@@ -59,17 +61,16 @@ class Login(Resource):
     @api.expect(login_model)
     def post(self):
         data = api.payload
-        email = data.get("email")
-        password = data.get("password")
-        if not all([email, password]):
+        ok, err = require_fields(data or {}, ["email", "password"])
+        if not ok:
             return format_response(
                 None,
                 success=False,
-                message="Missing email or password",
+                message=err,
                 status_code=400,
             )
 
-        user = user_service.authenticate_user(email, password)
+        user = user_service.authenticate_user(data["email"], data["password"])
         if not user:
             return format_response(
                 None,
@@ -78,7 +79,6 @@ class Login(Resource):
                 status_code=401,
             )
 
-        # Store user ID in session
         session["user_id"] = user.id
 
         user_data = {
@@ -94,12 +94,6 @@ class Login(Resource):
 class Logout(Resource):
     def post(self):
         session.pop("user_id", None)
-
-        # to print user value as per session
-        header_uid = request.headers.get("X-User-ID")
-        if header_uid:
-            print(f"User {header_uid} logged out via /logout")
-
         return format_response(None, message="Logged out successfully", status_code=200)
 
 
@@ -124,13 +118,13 @@ class UserList(Resource):
 class MyReports(Resource):
     def get(self):
         header_uid = request.headers.get("X-User-ID")
-        if not header_uid:
+        ok, err = require_fields({"user_id": header_uid}, ["user_id"])
+        if not ok:
             return format_response(
                 None, success=False, message="Not logged in", status_code=401
             )
-        try:
-            user_id = int(header_uid)
-        except ValueError:
+        user_id, err = safe_int(header_uid, "user_id")
+        if err:
             return format_response(
                 None, success=False, message="Invalid user ID", status_code=400
             )
@@ -148,25 +142,23 @@ class MyReports(Resource):
 
     def delete(self):
         header_uid = request.headers.get("X-User-ID")
-        if not header_uid:
+        ok, err = require_fields({"user_id": header_uid}, ["user_id"])
+        if not ok:
             return format_response(
                 None, success=False, message="Not logged in", status_code=401
             )
-        try:
-            user_id = int(header_uid)
-        except ValueError:
+        user_id, err = safe_int(header_uid, "user_id")
+        if err:
             return format_response(
                 None, success=False, message="Invalid user ID", status_code=400
             )
         data = request.get_json() or {}
         article_id = data.get("article_id")
-        if not article_id:
-            return format_response(
-                None, success=False, message="article_id is required", status_code=400
-            )
-        try:
-            article_id = int(article_id)
-        except ValueError:
+        ok, err = require_fields({"article_id": article_id}, ["article_id"])
+        if not ok:
+            return format_response(None, success=False, message=err, status_code=400)
+        article_id, err = safe_int(article_id, "article_id")
+        if err:
             return format_response(
                 None, success=False, message="Invalid article_id", status_code=400
             )

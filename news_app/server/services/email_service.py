@@ -2,6 +2,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.utils import formataddr
 from config.config import SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, EMAIL_FROM
+from server.utils.service_helper import send_email_safely
 
 
 class EmailService:
@@ -18,12 +19,10 @@ class EmailService:
         msg["From"] = formataddr(("NEWS_AGGREGATOR_TEAM", self.email_from))
         msg["To"] = to_email
 
-        try:
+        def do_send():
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
                 server.starttls()
                 server.login(self.smtp_username, self.smtp_password)
                 server.send_message(msg)
-            return True
-        except Exception as e:
-            print(f"Failed to send email to {to_email}: {e}")
-            return False
+
+        return send_email_safely(do_send)

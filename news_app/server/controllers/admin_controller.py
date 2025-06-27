@@ -13,6 +13,10 @@ from server.repository.report_repository import ReportRepository
 from server.repository.keyword_filter_repository import KeywordFilterRepository
 from server.repository.db_connector import db
 from server.utils.auth import require_role
+from server.utils.controller_helper import (
+    require_fields,
+    safe_int,
+)
 
 user_service = UserService(UserRepository(db))
 api = Namespace("admin", description="Admin operations")
@@ -57,9 +61,12 @@ class SetActiveSource(Resource):
     @api.expect(set_active_source_model)
     def post(self):
         data = api.payload
-        source_id = data.get("source_id")
-        if source_id is None:
-            return {"message": "source_id is required", "success": False}, 400
+        ok, err = require_fields(data or {}, ["source_id"])
+        if not ok:
+            return {"message": err, "success": False}, 400
+        source_id, err = safe_int(data.get("source_id"), "source_id")
+        if err:
+            return {"message": err, "success": False}, 400
 
         success = source_repo.set_active_source(source_id)
         if not success:
@@ -104,8 +111,9 @@ class NewsSourceCollection(Resource):
     @require_role("admin")
     def post(self):
         name = (api.payload or {}).get("name")
-        if not name:
-            return {"message": "name is required"}, 400
+        ok, err = require_fields({"name": name}, ["name"])
+        if not ok:
+            return {"message": err}, 400
         if not source_repo.add_source(name):
             return {"message": "Source may already exist"}, 409
         return {"message": "Source added"}, 201
@@ -218,8 +226,9 @@ class KeywordList(Resource):
     @require_role("admin")
     def post(self):
         keyword = (api.payload or {}).get("keyword")
-        if not keyword:
-            return {"message": "keyword is required"}, 400
+        ok, err = require_fields({"keyword": keyword}, ["keyword"])
+        if not ok:
+            return {"message": err}, 400
         if admin_service.add_keyword_filter(keyword):
             return {"message": "Keyword added"}, 201
         return {"message": "Failed to add keyword"}, 400
@@ -230,8 +239,9 @@ class BlockKeyword(Resource):
     @require_role("admin")
     def post(self):
         keyword = (api.payload or {}).get("keyword")
-        if not keyword:
-            return {"message": "keyword is required"}, 400
+        ok, err = require_fields({"keyword": keyword}, ["keyword"])
+        if not ok:
+            return {"message": err}, 400
         if admin_service.block_keyword(keyword):
             return {"message": "Keyword blocked"}, 200
         return {"message": "Failed to block keyword"}, 400
@@ -242,8 +252,9 @@ class UnblockKeyword(Resource):
     @require_role("admin")
     def post(self):
         keyword = (api.payload or {}).get("keyword")
-        if not keyword:
-            return {"message": "keyword is required"}, 400
+        ok, err = require_fields({"keyword": keyword}, ["keyword"])
+        if not ok:
+            return {"message": err}, 400
         if admin_service.unblock_keyword(keyword):
             return {"message": "Keyword unblocked"}, 200
         return {"message": "Failed to unblock keyword"}, 400
@@ -254,8 +265,9 @@ class DeleteKeyword(Resource):
     @require_role("admin")
     def post(self):
         keyword = (api.payload or {}).get("keyword")
-        if not keyword:
-            return {"message": "keyword is required"}, 400
+        ok, err = require_fields({"keyword": keyword}, ["keyword"])
+        if not ok:
+            return {"message": err}, 400
         if admin_service.delete_keyword(keyword):
             return {"message": "Keyword deleted"}, 200
         return {"message": "Failed to delete keyword"}, 400

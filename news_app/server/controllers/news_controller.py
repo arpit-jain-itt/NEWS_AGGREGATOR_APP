@@ -11,9 +11,14 @@ from server.repository.report_repository import ReportRepository
 from server.repository.keyword_filter_repository import KeywordFilterRepository
 from server.utils.response_formatter import format_response
 from server.repository.db_connector import db
+from server.utils.controller_helper import (
+    get_pagination,
+    safe_int,
+    parse_iso_date,
+    require_fields,
+)
 
 api = Namespace("news", description="News operations")
-
 
 news_service = NewsService(
     ArticleRepository(db),
@@ -26,34 +31,27 @@ news_service = NewsService(
 )
 
 
-def _get_pagination(args):
-    limit = int(args.get("limit", 20))
-    if "offset" in args:
-        offset = int(args.get("offset", 0))
-    else:
-        page = int(args.get("page", 1))
-        offset = (page - 1) * limit
-    return limit, offset
-
-
 @api.route("/headlines")
 class Headlines(Resource):
     def get(self):
         args = flask.request.args
         start_str = args.get("start_date")
         end_str = args.get("end_date")
-        limit, offset = _get_pagination(args)
-        try:
-            start_date = (
-                datetime.fromisoformat(start_str).date()
-                if start_str
-                else datetime.now().date()
-            )
-            end_date = datetime.fromisoformat(end_str).date() if end_str else start_date
-        except ValueError:
-            return format_response(
-                {"message": "Invalid date format. Use YYYY-MM-DD."}, 400, False
-            )
+        limit, offset = get_pagination(args)
+        if start_str:
+            start_date, err = parse_iso_date(start_str, "start_date")
+            if err:
+                return format_response({"message": err}, 400, False)
+            start_date = start_date.date()
+        else:
+            start_date = datetime.now().date()
+        if end_str:
+            end_date, err = parse_iso_date(end_str, "end_date")
+            if err:
+                return format_response({"message": err}, 400, False)
+            end_date = end_date.date()
+        else:
+            end_date = start_date
         start_dt = datetime.combine(start_date, datetime.min.time())
         end_dt = datetime.combine(end_date, datetime.max.time())
         articles = news_service.search_articles("", "", start_dt, end_dt, limit, offset)
@@ -80,7 +78,7 @@ class LatestNews(Resource):
     def get(self):
         args = flask.request.args
         category = args.get("category")
-        limit, offset = _get_pagination(args)
+        limit, offset = get_pagination(args)
         articles = news_service.get_latest_articles(category, limit, offset)
         return format_response(
             [
@@ -108,27 +106,18 @@ class SearchArticles(Resource):
         category = args.get("category", "").strip()
         start_str = args.get("start_date")
         end_str = args.get("end_date")
-        limit, offset = _get_pagination(args)
+        limit, offset = get_pagination(args)
         start_dt = end_dt = None
         if start_str:
-            try:
-                start_dt = datetime.fromisoformat(start_str)
-            except ValueError:
-                return format_response(
-                    {"message": "Invalid start_date. Use YYYY-MM-DD."}, 400, False
-                )
+            start_dt, err = parse_iso_date(start_str, "start_date")
+            if err:
+                return format_response({"message": err}, 400, False)
         if end_str:
-            try:
-                end_raw = datetime.fromisoformat(end_str)
-                end_dt = (
-                    end_raw
-                    if end_raw.time() != datetime.min.time()
-                    else datetime.combine(end_raw.date(), datetime.max.time())
-                )
-            except ValueError:
-                return format_response(
-                    {"message": "Invalid end_date. Use YYYY-MM-DD."}, 400, False
-                )
+            end_dt, err = parse_iso_date(end_str, "end_date")
+            if err:
+                return format_response({"message": err}, 400, False)
+            if end_dt.time() == datetime.min.time():
+                end_dt = datetime.combine(end_dt.date(), datetime.max.time())
         results = news_service.search_articles(
             keyword, category, start_dt, end_dt, limit, offset
         )
@@ -161,10 +150,9 @@ class NewsCategories(Resource):
 class SaveArticle(Resource):
     def post(self):
         data = flask.request.get_json()
-        if not data or "user_id" not in data or "article_id" not in data:
-            return format_response(
-                {"message": "user_id and article_id are required"}, 400
-            )
+        ok, err = require_fields(data or {}, ["user_id", "article_id"])
+        if not ok:
+            return format_response({"message": err}, 400)
         result = news_service.save_article(data["user_id"], data["article_id"])
         if result == "saved":
             return format_response({"message": "Article saved successfully."}, 201)
@@ -175,17 +163,15 @@ class SaveArticle(Resource):
     def delete(self):
         user_id = flask.request.args.get("user_id")
         article_id = flask.request.args.get("article_id")
-        if not user_id or not article_id:
-            return format_response(
-                {"message": "user_id and article_id are required"}, 400
-            )
-        try:
-            user_id = int(user_id)
-            article_id = int(article_id)
-        except ValueError:
-            return format_response(
-                {"message": "user_id and article_id must be integers"}, 400
-            )
+        ok, err = require_fields(
+            {"user_id": user_id, "article_id": article_id}, ["user_id", "article_id"]
+        )
+        if not ok:
+            return format_response({"message": err}, 400)
+        user_id, err1 = safe_int(user_id, "user_id")
+        article_id, err2 = safe_int(article_id, "article_id")
+        if err1 or err2:
+            return format_response({"message": err1 or err2}, 400)
         result = news_service.remove_saved_article(user_id, article_id)
         if result == "deleted":
             return format_response({"message": "Article removed successfully."}, 200)
@@ -198,10 +184,9 @@ class SaveArticle(Resource):
 class MarkArticleViewed(Resource):
     def post(self):
         data = flask.request.get_json()
-        if not data or "user_id" not in data or "article_id" not in data:
-            return format_response(
-                {"message": "user_id and article_id are required"}, 400
-            )
+        ok, err = require_fields(data or {}, ["user_id", "article_id"])
+        if not ok:
+            return format_response({"message": err}, 400)
         try:
             news_service.mark_article_viewed(data["user_id"], data["article_id"])
             return format_response({"message": "Article marked as viewed."}, 200)
@@ -215,12 +200,12 @@ class MarkArticleViewed(Resource):
 class SavedArticles(Resource):
     def get(self):
         user_id = flask.request.args.get("user_id")
-        if not user_id:
-            return format_response({"message": "user_id is required"}, 400)
-        try:
-            user_id = int(user_id)
-        except ValueError:
-            return format_response({"message": "user_id must be an integer"}, 400)
+        ok, err = require_fields({"user_id": user_id}, ["user_id"])
+        if not ok:
+            return format_response({"message": err}, 400)
+        user_id, err = safe_int(user_id, "user_id")
+        if err:
+            return format_response({"message": err}, 400)
         saved_articles = news_service.get_saved_articles_by_user(user_id)
         return format_response(
             [
@@ -244,10 +229,9 @@ class SavedArticles(Resource):
 class ArticleReaction(Resource):
     def post(self):
         data = flask.request.get_json()
-        if not data or {"user_id", "article_id", "is_like"} - data.keys():
-            return format_response(
-                {"message": "user_id, article_id and is_like are required"}, 400
-            )
+        ok, err = require_fields(data or {}, ["user_id", "article_id", "is_like"])
+        if not ok:
+            return format_response({"message": err}, 400)
         result = news_service.react_to_article(
             data["user_id"], data["article_id"], bool(data["is_like"])
         )
@@ -260,17 +244,15 @@ class ArticleReaction(Resource):
     def delete(self):
         user_id = flask.request.args.get("user_id")
         article_id = flask.request.args.get("article_id")
-        if not user_id or not article_id:
-            return format_response(
-                {"message": "user_id and article_id are required"}, 400
-            )
-        try:
-            user_id = int(user_id)
-            article_id = int(article_id)
-        except ValueError:
-            return format_response(
-                {"message": "user_id and article_id must be integers"}, 400
-            )
+        ok, err = require_fields(
+            {"user_id": user_id, "article_id": article_id}, ["user_id", "article_id"]
+        )
+        if not ok:
+            return format_response({"message": err}, 400)
+        user_id, err1 = safe_int(user_id, "user_id")
+        article_id, err2 = safe_int(article_id, "article_id")
+        if err1 or err2:
+            return format_response({"message": err1 or err2}, 400)
         result = news_service.remove_reaction(user_id, article_id)
         if result == "deleted":
             return format_response({"message": "Reaction removed."}, 200)
@@ -283,12 +265,12 @@ class ArticleReaction(Resource):
 class ReactionSummary(Resource):
     def get(self):
         user_id = flask.request.args.get("user_id")
-        if not user_id:
-            return format_response({"message": "user_id is required"}, 400)
-        try:
-            user_id = int(user_id)
-        except ValueError:
-            return format_response({"message": "user_id must be an integer"}, 400)
+        ok, err = require_fields({"user_id": user_id}, ["user_id"])
+        if not ok:
+            return format_response({"message": err}, 400)
+        user_id, err = safe_int(user_id, "user_id")
+        if err:
+            return format_response({"message": err}, 400)
         summary = news_service.get_reaction_summary(user_id)
         return format_response(summary, 200)
 
@@ -299,15 +281,15 @@ class ReactedArticles(Resource):
         args = flask.request.args
         user_id = args.get("user_id")
         reaction_type = args.get("type", "like").lower()
-        if not user_id:
-            return format_response({"message": "user_id is required"}, 400)
-        try:
-            user_id = int(user_id)
-        except ValueError:
-            return format_response({"message": "user_id must be an integer"}, 400)
+        ok, err = require_fields({"user_id": user_id}, ["user_id"])
+        if not ok:
+            return format_response({"message": err}, 400)
+        user_id, err = safe_int(user_id, "user_id")
+        if err:
+            return format_response({"message": err}, 400)
         if reaction_type not in ("like", "dislike"):
             return format_response({"message": "type must be 'like' or 'dislike'"}, 400)
-        limit, offset = _get_pagination(args)
+        limit, offset = get_pagination(args)
         articles = news_service.get_reacted_articles(
             user_id, reaction_type, limit, offset
         )
@@ -342,22 +324,22 @@ class ArticleReactionCounts(Resource):
 class ReportArticle(Resource):
     def post(self):
         data = flask.request.get_json()
-        if not data or {"user_id", "article_id", "reason"} - data.keys():
+        ok, err = require_fields(data or {}, ["user_id", "article_id", "reason"])
+        if not ok:
             return format_response(
                 None,
                 success=False,
-                message="user_id, article_id, and reason are required",
+                message=err,
                 status_code=400,
             )
-        try:
-            user_id = int(data["user_id"])
-            article_id = int(data["article_id"])
-            reason = str(data["reason"])
-        except Exception:
+        user_id, err1 = safe_int(data["user_id"], "user_id")
+        article_id, err2 = safe_int(data["article_id"], "article_id")
+        reason = str(data["reason"])
+        if err1 or err2:
             return format_response(
                 None,
                 success=False,
-                message="Invalid data types for user_id or article_id.",
+                message=err1 or err2,
                 status_code=400,
             )
         try:
@@ -370,12 +352,8 @@ class ReportArticle(Resource):
                 return format_response(
                     None, message="Failed to submit report.", status_code=500
                 )
-        except Exception as ex:
-            print("ERROR in /report:", ex)
-            import traceback
-
-            traceback.print_exc()
-            return format_response(None, message=f"Error: {ex}", status_code=500)
+        except Exception:
+            return format_response(None, message="Error occurred.", status_code=500)
 
 
 @api.route("/article/<int:article_id>")

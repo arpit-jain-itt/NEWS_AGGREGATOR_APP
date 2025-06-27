@@ -1,7 +1,7 @@
 from typing import List, Tuple, Optional, Any
-from datetime import datetime
 from server.models.article_model import Article
 from server.repository.db_connector import DBConnector
+from server.utils.repository_helper import with_cursor
 
 
 class LikesDislikesRepository:
@@ -18,7 +18,6 @@ class LikesDislikesRepository:
             INSERT INTO likes_dislikes (user_id, article_id, is_like, created_at)
             VALUES (%s, %s, %s, NOW())
         """
-
         conn = self.db.connect()
         try:
             affected = self._run_write(
@@ -85,10 +84,9 @@ class LikesDislikesRepository:
             LIMIT %s OFFSET %s
         """
         conn = self.db.connect()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute(query, (user_id, is_like, limit, offset))
-        rows = cursor.fetchall()
-        cursor.close()
+        with with_cursor(conn, dictionary=True) as cursor:
+            cursor.execute(query, (user_id, is_like, limit, offset))
+            rows = cursor.fetchall()
         return self._build_articles(rows)
 
     def _remove_specific_reaction(
@@ -106,24 +104,17 @@ class LikesDislikesRepository:
             return "error"
 
     def _run_write(self, conn, query: str, params: tuple) -> int:
-        cursor = conn.cursor()
-        try:
+        with with_cursor(conn) as cursor:
             cursor.execute(query, params)
             affected = cursor.rowcount
             conn.commit()
             return affected
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            cursor.close()
 
     def _run_fetchone(self, query: str, params: tuple) -> Optional[Any]:
         conn = self.db.connect()
-        cursor = conn.cursor()
-        cursor.execute(query, params)
-        row = cursor.fetchone()
-        cursor.close()
+        with with_cursor(conn) as cursor:
+            cursor.execute(query, params)
+            row = cursor.fetchone()
         return row
 
     def _build_articles(self, rows: List[dict]) -> List[Article]:
@@ -143,7 +134,7 @@ class LikesDislikesRepository:
             GROUP BY is_like
         """
         conn = self.db.connect()
-        with conn.cursor(dictionary=True) as cursor:
+        with with_cursor(conn, dictionary=True) as cursor:
             cursor.execute(query, (article_id,))
             rows = cursor.fetchall()
         summary = {"likes": 0, "dislikes": 0}

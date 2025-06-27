@@ -8,6 +8,10 @@ from server.utils.notification_pref_codec import (
     encode_preferences,
     decode_preferences,
 )
+from server.utils.controller_helper import (
+    require_fields,
+    safe_int,
+)
 
 api = Namespace("notifications", description="Notification operations")
 
@@ -19,14 +23,12 @@ category_repo = CategoryRepository(db)
 class NotificationPreferences(Resource):
     def get(self):
         user_id = flask_request.args.get("user_id")
-        if not user_id:
-            return format_response({"message": "user_id is required"}, status_code=400)
-        try:
-            user_id = int(user_id)
-        except ValueError:
-            return format_response(
-                {"message": "user_id must be an integer"}, status_code=400
-            )
+        ok, err = require_fields({"user_id": user_id}, ["user_id"])
+        if not ok:
+            return format_response({"message": err}, status_code=400)
+        user_id, err = safe_int(user_id, "user_id")
+        if err:
+            return format_response({"message": err}, status_code=400)
 
         prefs = notification_repo.get_notification_preferences(user_id)
         if not prefs:
@@ -46,15 +48,12 @@ class NotificationPreferences(Resource):
 
     def post(self):
         data = flask_request.get_json()
-        if not data or "user_id" not in data:
-            return format_response({"message": "user_id is required"}, status_code=400)
-
-        try:
-            user_id = int(data["user_id"])
-        except ValueError:
-            return format_response(
-                {"message": "user_id must be an integer"}, status_code=400
-            )
+        ok, err = require_fields(data or {}, ["user_id"])
+        if not ok:
+            return format_response({"message": err}, status_code=400)
+        user_id, err = safe_int(data["user_id"], "user_id")
+        if err:
+            return format_response({"message": err}, status_code=400)
 
         existing = notification_repo.get_notification_preferences(user_id) or {}
         decoded_existing = decode_preferences(existing.get("keywords", ""))

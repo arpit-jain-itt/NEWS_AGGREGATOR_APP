@@ -134,7 +134,6 @@ class NewsReportingHandler:
             print("Failed to fetch article details.")
             return
         print_article_details(article)
-        input("\nPress Enter to go back...")
 
     def list_my_reported_articles(self):
         while True:
@@ -158,12 +157,28 @@ class NewsReportingHandler:
                 print("Invalid choice.")
                 continue
             article_id = reports[int(choice) - 1]["article_id"]
-            self.show_reported_article_details(article_id)
-            unreport = (
-                input("Do you want to unreport this article? (y/n): ").strip().lower()
-            )
-            if unreport == "y":
-                self.unreport_article(article_id)
+
+            while True:
+                article = get_json(
+                    f"/api/news/article/{article_id}",
+                    headers=self._headers(),
+                    default=None,
+                )
+                if not article:
+                    print("Failed to fetch article details.")
+                    break
+                print_article_details(article)
+                print("\nOptions:")
+                print("1. Unreport")
+                print("2. Go Back")
+                sub_choice = input("Choose an option: ").strip()
+                if sub_choice == "1":
+                    self.unreport_article(article_id)
+                    break
+                elif sub_choice == "2":
+                    break
+                else:
+                    print("Invalid choice.")
             break
 
     def unreport_article(self, article_id):

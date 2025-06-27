@@ -1,6 +1,5 @@
 from typing import List, Optional, Literal
 from datetime import datetime
-from dateutil.parser import parse as parse_datetime
 from server.models.report_model import Report
 from server.repository.article_repository import ArticleRepository
 from server.repository.category_repository import CategoryRepository
@@ -10,9 +9,15 @@ from server.repository.likes_dislikes_repository import LikesDislikesRepository
 from server.repository.keyword_filter_repository import KeywordFilterRepository
 from server.repository.report_repository import ReportRepository
 from server.models.article_model import Article
-from server.external_apis.newsapi_org import NewsApiOrgClient
+from server.external_apis.thenewsapi_category_mapper import map_article_to_category
+from server.external_apis.news_api_factory import get_news_api_client
 from server.external_apis.thenewsapi_com import TheNewsApiClient
 from config.config import REPORT_THRESHOLD
+from server.utils.service_helper import (
+    parse_ts,
+    get_category_id,
+    get_current_utc_time,
+)
 
 
 class NewsService:
@@ -51,16 +56,18 @@ class NewsService:
         categories = [c.name for c in self.category_repo.get_all_categories()]
         total_inserted = 0
 
+        primary_client = get_news_api_client(primary_source.name)
         total_inserted += self._insert_from_provider(
-            client=NewsApiOrgClient(),
+            client=primary_client,
             source=primary_source,
             categories=categories,
             total_to_fetch=self.MAX_ARTICLES,
         )
 
         if total_inserted < self.MAX_ARTICLES and secondary_source:
+            secondary_client = get_news_api_client(secondary_source.name)
             total_inserted += self._insert_from_provider(
-                client=TheNewsApiClient(),
+                client=secondary_client,
                 source=secondary_source,
                 categories=categories,
                 total_to_fetch=self.MAX_ARTICLES - total_inserted,
@@ -72,7 +79,7 @@ class NewsService:
                 if total_inserted < self.MAX_ARTICLES and secondary_source
                 else primary_source.id
             )
-            self.source_repo.update_last_accessed(src_id, datetime.now())
+            self.source_repo.update_last_accessed(src_id, get_current_utc_time())
 
     def _insert_from_provider(
         self,
@@ -96,12 +103,13 @@ class NewsService:
                 if inserted >= total_to_fetch:
                     break
 
-                published_at = self._parse_ts(
+                published_at = parse_ts(
                     article.get("publishedAt")
                     or article.get("published_at")
                     or article.get("date")
                 )
 
+                # Blocked keyword filtering
                 if self.keyword_repo:
                     blocked_keywords = [
                         k.keyword for k in self.keyword_repo.get_all_keywords()
@@ -110,48 +118,26 @@ class NewsService:
                     if any(bk.lower() in text for bk in blocked_keywords):
                         continue
 
+                # Category mapping
+                if isinstance(client, TheNewsApiClient):
+                    mapped_category = map_article_to_category(article)
+                    category_id = get_category_id(self.category_repo, mapped_category)
+                else:
+                    category_id = get_category_id(self.category_repo, category)
+
                 self.article_repo.insert_article(
                     title=article.get("title"),
                     description=article.get("description"),
                     url=article.get("url"),
                     published_at=published_at,
                     source_id=source.id,
-                    category_id=self._category_id(category),
+                    category_id=category_id,
                     content=article.get("content") or article.get("snippet"),
                 )
                 inserted += 1
                 break
 
         return inserted
-
-    @staticmethod
-    def _parse_ts(raw: Optional[str]) -> datetime:
-        try:
-            return parse_datetime(raw) if raw else datetime.now()
-        except Exception:
-            return datetime.now()
-
-    def _category_id(self, category_name: str) -> int:
-        cat = self.category_repo.get_category_by_name(category_name)
-        if cat:
-            return cat.id
-        # go to general category if not match with any other ones
-        return self.category_repo.get_general_category().id
-
-    def _filter_blocked_keywords(self, articles: List[Article]) -> List[Article]:
-        if not self.keyword_repo:
-            return articles
-        blocked_keywords = [
-            k.keyword.lower() for k in self.keyword_repo.get_all_keywords()
-        ]
-        filtered = []
-        for article in articles:
-            text = f"{article.title or ''} {article.description or ''} {article.content or ''}".lower()
-            if any(bk in text for bk in blocked_keywords):
-                print(f"DEBUG: Article blocked: {article.title}")
-            if not any(bk in text for bk in blocked_keywords):
-                filtered.append(article)
-        return filtered
 
     def get_latest_articles(
         self,
@@ -203,6 +189,22 @@ class NewsService:
             include_hidden=False,
         )
         return self._filter_blocked_keywords(articles)
+
+    def _filter_blocked_keywords(self, articles: List[Article]) -> List[Article]:
+        if not self.keyword_repo:
+            return articles
+        blocked_keywords = [
+            k.keyword.lower() for k in self.keyword_repo.get_all_keywords()
+        ]
+        return [
+            art
+            for art in articles
+            if not any(
+                bk
+                in f"{art.title or ''} {art.description or ''} {getattr(art, 'content', '')}".lower()
+                for bk in blocked_keywords
+            )
+        ]
 
     def mark_article_viewed(self, user_id: int, article_id: int) -> None:
         self.viewed_repo.mark_viewed(user_id, article_id)

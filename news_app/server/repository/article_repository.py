@@ -2,6 +2,7 @@ from typing import List, Optional
 from datetime import datetime, timezone
 from server.models.article_model import Article
 from server.repository.db_connector import DBConnector
+from server.utils.repository_helper import with_cursor
 
 
 class ArticleRepository:
@@ -12,7 +13,6 @@ class ArticleRepository:
         self, article_id: int, include_hidden: bool = False
     ) -> Optional[Article]:
         conn = self.db.connect()
-        cursor = conn.cursor(dictionary=True)
         query = """
             SELECT a.*, c.name AS category_name
             FROM articles a
@@ -22,9 +22,9 @@ class ArticleRepository:
         params = [article_id]
         if not include_hidden:
             query += " AND a.is_hidden = FALSE"
-        cursor.execute(query, params)
-        row = cursor.fetchone()
-        cursor.close()
+        with with_cursor(conn, dictionary=True) as cursor:
+            cursor.execute(query, params)
+            row = cursor.fetchone()
         if row:
             category_name = row.pop("category_name", None)
             article = Article(**row)
@@ -36,7 +36,6 @@ class ArticleRepository:
         self, category_id: int, limit=20, offset=0, include_hidden: bool = False
     ) -> List[Article]:
         conn = self.db.connect()
-        cursor = conn.cursor(dictionary=True)
         query = """
             SELECT a.*, c.name AS category_name
             FROM articles a
@@ -48,9 +47,9 @@ class ArticleRepository:
             query += " AND a.is_hidden = FALSE"
         query += " ORDER BY a.published_at DESC LIMIT %s OFFSET %s"
         params.extend([limit, offset])
-        cursor.execute(query, params)
-        rows = cursor.fetchall()
-        cursor.close()
+        with with_cursor(conn, dictionary=True) as cursor:
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
         return self._build_articles(rows)
 
     def get_articles_by_ids(
@@ -59,7 +58,6 @@ class ArticleRepository:
         if not article_ids:
             return []
         conn = self.db.connect()
-        cursor = conn.cursor(dictionary=True)
         format_strings = ",".join(["%s"] * len(article_ids))
         query = f"""
             SELECT a.*, c.name AS category_name
@@ -70,9 +68,9 @@ class ArticleRepository:
         params = list(article_ids)
         if not include_hidden:
             query += " AND a.is_hidden = FALSE"
-        cursor.execute(query, tuple(params))
-        rows = cursor.fetchall()
-        cursor.close()
+        with with_cursor(conn, dictionary=True) as cursor:
+            cursor.execute(query, tuple(params))
+            rows = cursor.fetchall()
         return self._build_articles(rows)
 
     def get_next_article_id(self) -> int:
@@ -112,43 +110,38 @@ class ArticleRepository:
         category_id: int,
     ) -> int:
         conn = self.db.connect()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT id FROM articles WHERE url = %s", (url,))
-        existing = cursor.fetchone()
-        cursor.close()
-
+        with with_cursor(conn, dictionary=True) as cursor:
+            cursor.execute("SELECT id FROM articles WHERE url = %s", (url,))
+            existing = cursor.fetchone()
         if existing:
             return existing["id"]
 
         article_id = self.get_next_article_id()
-
-        insert_cursor = conn.cursor()
         query = """
             INSERT INTO articles (id, title, description, content, url, published_at, source_id, category_id)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
-        insert_cursor.execute(
-            query,
-            (
-                article_id,
-                title,
-                description,
-                content,
-                url,
-                published_at,
-                source_id,
-                category_id,
-            ),
-        )
-        conn.commit()
-        insert_cursor.close()
+        with with_cursor(conn) as insert_cursor:
+            insert_cursor.execute(
+                query,
+                (
+                    article_id,
+                    title,
+                    description,
+                    content,
+                    url,
+                    published_at,
+                    source_id,
+                    category_id,
+                ),
+            )
+            conn.commit()
         return article_id
 
     def get_latest_articles(
         self, limit=20, offset=0, include_hidden: bool = False
     ) -> List[Article]:
         conn = self.db.connect()
-        cursor = conn.cursor(dictionary=True)
         query = """
             SELECT a.*, c.name AS category_name
             FROM articles a
@@ -158,9 +151,9 @@ class ArticleRepository:
             query += " WHERE a.is_hidden = FALSE"
         query += " ORDER BY a.published_at DESC LIMIT %s OFFSET %s"
         params = [limit, offset]
-        cursor.execute(query, params)
-        rows = cursor.fetchall()
-        cursor.close()
+        with with_cursor(conn, dictionary=True) as cursor:
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
         return self._build_articles(rows)
 
     def search_articles(
@@ -174,7 +167,6 @@ class ArticleRepository:
         include_hidden: bool = False,
     ) -> List[Article]:
         conn = self.db.connect()
-        cursor = conn.cursor(dictionary=True)
         query = """
             SELECT a.*, c.name AS category_name
             FROM articles a
@@ -213,64 +205,58 @@ class ArticleRepository:
         query += " ORDER BY a.published_at DESC LIMIT %s OFFSET %s"
         params.extend([limit, offset])
 
-        cursor.execute(query, tuple(params))
-        rows = cursor.fetchall()
-        cursor.close()
+        with with_cursor(conn, dictionary=True) as cursor:
+            cursor.execute(query, tuple(params))
+            rows = cursor.fetchall()
         return self._build_articles(rows)
 
     def is_article_saved_by_user(self, user_id: int, article_id: int) -> bool:
         conn = self.db.connect()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT 1 FROM saved_articles WHERE user_id = %s AND article_id = %s",
-            (user_id, article_id),
-        )
-        result = cursor.fetchone()
-        cursor.close()
+        with with_cursor(conn) as cursor:
+            cursor.execute(
+                "SELECT 1 FROM saved_articles WHERE user_id = %s AND article_id = %s",
+                (user_id, article_id),
+            )
+            result = cursor.fetchone()
         return result is not None
 
     def save_article_for_user(self, user_id: int, article_id: int) -> str:
         if self.is_article_saved_by_user(user_id, article_id):
             return "already_saved"
         conn = self.db.connect()
-        cursor = conn.cursor()
         try:
-            cursor.execute(
-                "INSERT INTO saved_articles (user_id, article_id, saved_at) VALUES (%s, %s, NOW())",
-                (user_id, article_id),
-            )
-            conn.commit()
+            with with_cursor(conn) as cursor:
+                cursor.execute(
+                    "INSERT INTO saved_articles (user_id, article_id, saved_at) VALUES (%s, %s, NOW())",
+                    (user_id, article_id),
+                )
+                conn.commit()
             return "saved"
         except Exception:
             conn.rollback()
             return "error"
-        finally:
-            cursor.close()
 
     def remove_saved_article(self, user_id: int, article_id: int) -> str:
         conn = self.db.connect()
-        cursor = conn.cursor()
         try:
-            cursor.execute(
-                "DELETE FROM saved_articles WHERE user_id = %s AND article_id = %s",
-                (user_id, article_id),
-            )
-            if cursor.rowcount == 0:
-                conn.rollback()
-                return "not_found"
-            conn.commit()
+            with with_cursor(conn) as cursor:
+                cursor.execute(
+                    "DELETE FROM saved_articles WHERE user_id = %s AND article_id = %s",
+                    (user_id, article_id),
+                )
+                if cursor.rowcount == 0:
+                    conn.rollback()
+                    return "not_found"
+                conn.commit()
             return "deleted"
         except Exception:
             conn.rollback()
             return "error"
-        finally:
-            cursor.close()
 
     def get_saved_articles_by_user(
         self, user_id: int, limit=20, offset=0, include_hidden: bool = False
     ) -> List[Article]:
         conn = self.db.connect()
-        cursor = conn.cursor(dictionary=True)
         query = """
             SELECT a.*, c.name AS category_name
             FROM saved_articles sa
@@ -283,9 +269,9 @@ class ArticleRepository:
             query += " AND a.is_hidden = FALSE"
         query += " ORDER BY sa.saved_at DESC LIMIT %s OFFSET %s"
         params.extend([limit, offset])
-        cursor.execute(query, params)
-        rows = cursor.fetchall()
-        cursor.close()
+        with with_cursor(conn, dictionary=True) as cursor:
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
         return self._build_articles(rows)
 
     def get_headlines(
@@ -297,7 +283,6 @@ class ArticleRepository:
         include_hidden: bool = False,
     ) -> List[Article]:
         conn = self.db.connect()
-        cursor = conn.cursor(dictionary=True)
         query = """
             SELECT a.*, c.name AS category_name
             FROM articles a
@@ -322,26 +307,24 @@ class ArticleRepository:
         query += " ORDER BY a.published_at DESC LIMIT %s OFFSET %s"
         params.extend([limit, offset])
 
-        cursor.execute(query, tuple(params))
-        rows = cursor.fetchall()
-        cursor.close()
+        with with_cursor(conn, dictionary=True) as cursor:
+            cursor.execute(query, tuple(params))
+            rows = cursor.fetchall()
         return self._build_articles(rows)
 
     def set_article_hidden(self, article_id: int, is_hidden: bool) -> bool:
         conn = self.db.connect()
-        cursor = conn.cursor()
         try:
-            cursor.execute(
-                "UPDATE articles SET is_hidden = %s WHERE id = %s",
-                (is_hidden, article_id),
-            )
-            conn.commit()
-            return cursor.rowcount > 0
+            with with_cursor(conn) as cursor:
+                cursor.execute(
+                    "UPDATE articles SET is_hidden = %s WHERE id = %s",
+                    (is_hidden, article_id),
+                )
+                conn.commit()
+                return cursor.rowcount > 0
         except Exception:
             conn.rollback()
             return False
-        finally:
-            cursor.close()
 
     def _build_articles(self, rows: List[dict]) -> List[Article]:
         articles = []
@@ -354,7 +337,6 @@ class ArticleRepository:
 
     def get_blocked_articles(self) -> List[Article]:
         conn = self.db.connect()
-        cursor = conn.cursor(dictionary=True)
         query = """
             SELECT a.*, c.name AS category_name
             FROM articles a
@@ -362,7 +344,7 @@ class ArticleRepository:
             WHERE a.is_hidden = TRUE
             ORDER BY a.published_at DESC
         """
-        cursor.execute(query)
-        rows = cursor.fetchall()
-        cursor.close()
+        with with_cursor(conn, dictionary=True) as cursor:
+            cursor.execute(query)
+            rows = cursor.fetchall()
         return self._build_articles(rows)

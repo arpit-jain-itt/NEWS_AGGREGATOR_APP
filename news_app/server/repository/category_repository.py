@@ -1,6 +1,12 @@
 from typing import List, Optional
 from server.models.category_model import Category
 from server.repository.db_connector import DBConnector
+from server.utils.repository_helper import (
+    with_cursor,
+    rows_to_models,
+    row_to_model,
+    safe_execute,
+)
 
 
 class CategoryRepository:
@@ -9,47 +15,39 @@ class CategoryRepository:
 
     def get_all_categories(self, include_hidden: bool = False) -> List[Category]:
         conn = self.db.connect()
-        cursor = conn.cursor(dictionary=True)
-        try:
-            query = "SELECT * FROM categories"
-            if not include_hidden:
-                query += " WHERE is_hidden = FALSE"
-            query += " ORDER BY name"
+        query = "SELECT * FROM categories"
+        if not include_hidden:
+            query += " WHERE is_hidden = FALSE"
+        query += " ORDER BY name"
+        with with_cursor(conn, dictionary=True) as cursor:
             cursor.execute(query)
             rows = cursor.fetchall()
-            return [Category(**row) for row in rows]
-        finally:
-            cursor.close()
+        return rows_to_models(rows, Category)
 
     def get_category_by_name(self, name: str) -> Optional[Category]:
         name = name.strip().lower()
         conn = self.db.connect()
-        cursor = conn.cursor(dictionary=True)
-        try:
-            cursor.execute("SELECT * FROM categories WHERE LOWER(name) = %s", (name,))
+        query = "SELECT * FROM categories WHERE LOWER(name) = %s"
+        with with_cursor(conn, dictionary=True) as cursor:
+            cursor.execute(query, (name,))
             row = cursor.fetchone()
-            return Category(**row) if row else None
-        finally:
-            cursor.close()
+        return row_to_model(row, Category)
 
     def add_category(self, name: str) -> bool:
-        try:
-            name = name.strip().lower()
+        def do_add():
+            name_lc = name.strip().lower()
             conn = self.db.connect()
-            cursor = conn.cursor()
+            with with_cursor(conn) as cursor:
+                cursor.execute(
+                    "SELECT id FROM categories WHERE LOWER(name) = %s", (name_lc,)
+                )
+                if cursor.fetchone():
+                    return False  # already exists
+                cursor.execute("INSERT INTO categories (name) VALUES (%s)", (name_lc,))
+                conn.commit()
+                return True
 
-            cursor.execute("SELECT id FROM categories WHERE LOWER(name) = %s", (name,))
-            if cursor.fetchone():
-                return False  # already exists
-
-            cursor.execute("INSERT INTO categories (name) VALUES (%s)", (name,))
-            conn.commit()
-            return True
-        except Exception as ex:
-            print(f"Error adding category: {ex}")
-            return False
-        finally:
-            cursor.close()
+        return safe_execute(do_add, default=False)
 
     def get_or_create_category(self, name: str) -> Optional[Category]:
         cat = self.get_category_by_name(name)
@@ -66,30 +64,24 @@ class CategoryRepository:
         return cat
 
     def delete_category_by_id(self, category_id: int) -> bool:
-        try:
+        def do_delete():
             conn = self.db.connect()
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM categories WHERE id = %s", (category_id,))
-            conn.commit()
-            return cursor.rowcount > 0
-        except Exception as ex:
-            print(f"Error deleting category: {ex}")
-            return False
-        finally:
-            cursor.close()
+            with with_cursor(conn) as cursor:
+                cursor.execute("DELETE FROM categories WHERE id = %s", (category_id,))
+                conn.commit()
+                return cursor.rowcount > 0
+
+        return safe_execute(do_delete, default=False)
 
     def set_category_hidden(self, category_id: int, is_hidden: bool) -> bool:
-        try:
+        def do_update():
             conn = self.db.connect()
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE categories SET is_hidden = %s WHERE id = %s",
-                (is_hidden, category_id),
-            )
-            conn.commit()
-            return cursor.rowcount > 0
-        except Exception as ex:
-            print(f"Error updating category hidden status: {ex}")
-            return False
-        finally:
-            cursor.close()
+            with with_cursor(conn) as cursor:
+                cursor.execute(
+                    "UPDATE categories SET is_hidden = %s WHERE id = %s",
+                    (is_hidden, category_id),
+                )
+                conn.commit()
+                return cursor.rowcount > 0
+
+        return safe_execute(do_update, default=False)
