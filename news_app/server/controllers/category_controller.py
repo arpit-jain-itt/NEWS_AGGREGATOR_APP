@@ -30,11 +30,20 @@ class CategoryCollection(Resource):
         name = (api.payload or {}).get("name", "").strip()
         ok, err = require_fields({"name": name}, ["name"])
         if not ok:
-            return format_response(None, success=False, message=err, status_code=400)
+            return format_response(
+                None,
+                success=False,
+                message=err,
+                status_code=400,
+            )
 
         success = category_repo.add_category(name)
         if success:
-            return format_response(None, message="Category added", status_code=201)
+            return format_response(
+                None,
+                message="Category added",
+                status_code=201,
+            )
 
         return format_response(
             None,
@@ -50,7 +59,9 @@ class CategoryItem(Resource):
     @require_role("admin")
     def delete(self, category_id):
         if category_repo.delete_category_by_id(category_id):
-            return format_response(None, message="Category deleted", status_code=200)
+            return format_response(
+                None, message="Category deleted", status_code=200
+            )
 
         return format_response(
             None,

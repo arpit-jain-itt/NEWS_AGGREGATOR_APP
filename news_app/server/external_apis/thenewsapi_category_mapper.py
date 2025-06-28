@@ -111,7 +111,11 @@ CATEGORY_KEYWORDS = {
 
 
 def map_article_to_category(article):
-    text = f"{article.get('title', '')} {article.get('description', '')} {article.get('content', '')}".lower()
+    text = (
+        f"{article.get('title', '')} "
+        f"{article.get('description', '')} "
+        f"{article.get('content', '')}"
+    ).lower()
     for category, keywords in CATEGORY_KEYWORDS.items():
         if any(keyword in text for keyword in keywords):
             return category

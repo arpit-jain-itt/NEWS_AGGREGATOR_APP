@@ -14,12 +14,12 @@ class NotificationRepository:
     def __init__(self, db: DBConnector):
         self.db = db
 
-    def get_notifications_for_user(self, user_id: int) -> List[UserNotification]:
+    def get_notifications_for_user(
+        self, user_id: int
+    ) -> List[UserNotification]:
         conn = self.db.connect()
         try:
-            query = (
-                "SELECT * FROM user_notifications WHERE user_id = %s AND enabled = TRUE"
-            )
+            query = "SELECT * FROM user_notifications WHERE user_id = %s AND enabled = TRUE"
             with with_cursor(conn, dictionary=True, buffered=True) as cursor:
                 cursor.execute(query, (user_id,))
                 rows = cursor.fetchall()
@@ -48,7 +48,9 @@ class NotificationRepository:
         conn = self.db.connect()
         try:
             with with_cursor(conn, buffered=True) as cursor:
-                query_select = "SELECT id FROM user_notifications WHERE user_id = %s"
+                query_select = (
+                    "SELECT id FROM user_notifications WHERE user_id = %s"
+                )
                 cursor.execute(query_select, (user_id,))
                 row = cursor.fetchone()
                 if row:
@@ -68,7 +70,8 @@ class NotificationRepository:
                         VALUES (%s, %s, %s, %s)
                     """
                     cursor.execute(
-                        query_insert, (user_id, keywords, notify_via_email, enabled)
+                        query_insert,
+                        (user_id, keywords, notify_via_email, enabled),
                     )
                     notification_id = cursor.lastrowid
                 conn.commit()
@@ -76,10 +79,14 @@ class NotificationRepository:
         finally:
             conn.close()
 
-    def get_notification_by_user_id(self, user_id: int) -> Optional[UserNotification]:
+    def get_notification_by_user_id(
+        self, user_id: int
+    ) -> Optional[UserNotification]:
         conn = self.db.connect()
         try:
-            query = "SELECT * FROM user_notifications WHERE user_id = %s LIMIT 1"
+            query = (
+                "SELECT * FROM user_notifications WHERE user_id = %s LIMIT 1"
+            )
             with with_cursor(conn, dictionary=True, buffered=True) as cursor:
                 cursor.execute(query, (user_id,))
                 row = cursor.fetchone()
@@ -111,7 +118,11 @@ class NotificationRepository:
             conn.close()
 
     def update_notification_preferences(
-        self, user_id: int, keywords: str, notify_via_email: bool, enabled: bool
+        self,
+        user_id: int,
+        keywords: str,
+        notify_via_email: bool,
+        enabled: bool,
     ) -> bool:
         conn = self.db.connect()
 
@@ -126,7 +137,9 @@ class NotificationRepository:
                         notify_via_email = VALUES(notify_via_email),
                         enabled = VALUES(enabled)
                 """
-                cursor.execute(query, (user_id, keywords, notify_via_email, enabled))
+                cursor.execute(
+                    query, (user_id, keywords, notify_via_email, enabled)
+                )
                 conn.commit()
                 return True
 
@@ -165,7 +178,9 @@ class NotificationRepository:
         finally:
             conn.close()
 
-    def mark_articles_as_viewed(self, user_id: int, article_ids: List[int]) -> None:
+    def mark_articles_as_viewed(
+        self, user_id: int, article_ids: List[int]
+    ) -> None:
         if not article_ids:
             return
         conn = self.db.connect()

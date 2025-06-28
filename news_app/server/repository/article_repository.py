@@ -36,7 +36,11 @@ class ArticleRepository:
             conn.close()
 
     def get_articles_by_category(
-        self, category_id: int, limit=20, offset=0, include_hidden: bool = False
+        self,
+        category_id: int,
+        limit=20,
+        offset=0,
+        include_hidden: bool = False,
     ) -> List[Article]:
         conn = self.db.connect()
         try:
@@ -98,7 +102,8 @@ class ArticleRepository:
 
             next_id = max(max_article_id, last_used) + 1
             cursor.execute(
-                "UPDATE article_sequence SET last_used = %s WHERE id = 1", (next_id,)
+                "UPDATE article_sequence SET last_used = %s WHERE id = 1",
+                (next_id,),
             )
             conn.commit()
             return next_id
@@ -122,7 +127,9 @@ class ArticleRepository:
         conn = self.db.connect()
         try:
             with with_cursor(conn, dictionary=True) as cursor:
-                cursor.execute("SELECT id FROM articles WHERE url = %s", (url,))
+                cursor.execute(
+                    "SELECT id FROM articles WHERE url = %s", (url,)
+                )
                 existing = cursor.fetchone()
             if existing:
                 return existing["id"]

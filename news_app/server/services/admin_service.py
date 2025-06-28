@@ -22,7 +22,9 @@ class AdminService:
         self.keyword_repo = keyword_repo
 
     def get_reported_articles(self) -> List[dict]:
-        return safe_repo_call(self.report_repo, "get_reported_articles", default=[])
+        return safe_repo_call(
+            self.report_repo, "get_reported_articles", default=[]
+        )
 
     def get_reports_for_article(self, article_id: int) -> List[Report]:
         return safe_repo_call(
@@ -31,32 +33,54 @@ class AdminService:
 
     def hide_article(self, article_id: int) -> bool:
         return safe_repo_call(
-            self.article_repo, "set_article_hidden", article_id, True, default=False
+            self.article_repo,
+            "set_article_hidden",
+            article_id,
+            True,
+            default=False,
         )
 
     def unhide_article(self, article_id: int) -> bool:
         return safe_repo_call(
-            self.article_repo, "set_article_hidden", article_id, False, default=False
+            self.article_repo,
+            "set_article_hidden",
+            article_id,
+            False,
+            default=False,
         )
 
     def update_report_status(self, article_id: int, status: str) -> None:
-        safe_repo_call(self.report_repo, "update_report_status", article_id, status)
+        safe_repo_call(
+            self.report_repo, "update_report_status", article_id, status
+        )
 
     def get_blocked_articles(self) -> List:
-        return safe_repo_call(self.article_repo, "get_blocked_articles", default=[])
+        return safe_repo_call(
+            self.article_repo, "get_blocked_articles", default=[]
+        )
 
     def hide_category(self, category_id: int) -> bool:
         return safe_repo_call(
-            self.category_repo, "set_category_hidden", category_id, True, default=False
+            self.category_repo,
+            "set_category_hidden",
+            category_id,
+            True,
+            default=False,
         )
 
     def unhide_category(self, category_id: int) -> bool:
         return safe_repo_call(
-            self.category_repo, "set_category_hidden", category_id, False, default=False
+            self.category_repo,
+            "set_category_hidden",
+            category_id,
+            False,
+            default=False,
         )
 
     def add_keyword_filter(self, keyword: str) -> bool:
-        return safe_repo_call(self.keyword_repo, "add_keyword", keyword, default=False)
+        return safe_repo_call(
+            self.keyword_repo, "add_keyword", keyword, default=False
+        )
 
     def block_keyword(self, keyword: str) -> bool:
         return safe_repo_call(
@@ -73,7 +97,12 @@ class AdminService:
             self.keyword_repo, "delete_keyword", keyword, default=False
         )
 
-    def get_all_keywords(self, active_only: bool = True) -> List[KeywordFilter]:
+    def get_all_keywords(
+        self, active_only: bool = True
+    ) -> List[KeywordFilter]:
         return safe_repo_call(
-            self.keyword_repo, "get_all_keywords", active_only=active_only, default=[]
+            self.keyword_repo,
+            "get_all_keywords",
+            active_only=active_only,
+            default=[],
         )

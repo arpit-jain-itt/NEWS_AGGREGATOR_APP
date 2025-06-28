@@ -17,7 +17,9 @@ class SourceRepository:
     def _get_connection(self):
         conn = self.db.connect()
         if conn is None or not conn.is_connected():
-            raise RuntimeError("[SourceRepository] DB connection is not available")
+            raise RuntimeError(
+                "[SourceRepository] DB connection is not available"
+            )
         return conn
 
     def get_active_source(self) -> Optional[Source]:
@@ -86,7 +88,9 @@ class SourceRepository:
                 return False
             try:
                 with with_cursor(conn, dictionary=True) as cursor:
-                    cursor.execute("SELECT 1 FROM sources WHERE name = %s", (name,))
+                    cursor.execute(
+                        "SELECT 1 FROM sources WHERE name = %s", (name,)
+                    )
                     if cursor.fetchone():
                         return False  # already exists
                     cursor.execute(
@@ -109,7 +113,9 @@ class SourceRepository:
                 return False
             try:
                 with with_cursor(conn) as cursor:
-                    cursor.execute("DELETE FROM sources WHERE id = %s", (source_id,))
+                    cursor.execute(
+                        "DELETE FROM sources WHERE id = %s", (source_id,)
+                    )
                     conn.commit()
                     return cursor.rowcount > 0
             finally:

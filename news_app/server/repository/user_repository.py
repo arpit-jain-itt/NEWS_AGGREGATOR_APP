@@ -46,7 +46,9 @@ class UserRepository:
                 VALUES (%s, %s, %s, %s)
             """
             with with_cursor(conn) as cursor:
-                cursor.execute(query, (username, email, password_hash, is_admin))
+                cursor.execute(
+                    query, (username, email, password_hash, is_admin)
+                )
                 conn.commit()
                 user_id = cursor.lastrowid
             return user_id
@@ -88,7 +90,9 @@ class UserRepository:
         """
         conn = self.db.connect()
         try:
-            query = "SELECT keywords FROM user_notifications WHERE user_id = %s"
+            query = (
+                "SELECT keywords FROM user_notifications WHERE user_id = %s"
+            )
             with with_cursor(conn, dictionary=True) as cursor:
                 cursor.execute(query, (user_id,))
                 row = cursor.fetchone()
@@ -98,11 +102,15 @@ class UserRepository:
                     data = json.loads(row["keywords"])
                     if isinstance(data, dict) and "keywords" in data:
                         return [
-                            kw.strip().lower() for kw in data["keywords"] if kw.strip()
+                            kw.strip().lower()
+                            for kw in data["keywords"]
+                            if kw.strip()
                         ]
                     # Or as a list
                     if isinstance(data, list):
-                        return [kw.strip().lower() for kw in data if kw.strip()]
+                        return [
+                            kw.strip().lower() for kw in data if kw.strip()
+                        ]
                 except Exception:
                     # Fallback: split by comma
                     return [

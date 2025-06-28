@@ -36,7 +36,9 @@ class NewsSourceHandler:
         )
         if not sources:
             print("No sources found.")
-            logging.error("No news sources found for user %s", self.current_user["id"])
+            logging.error(
+                "No news sources found for user %s", self.current_user["id"]
+            )
             return
         print("\n--- News Sources ---")
         for src in sources:
@@ -85,7 +87,9 @@ class NewsSourceHandler:
                 src_id,
             )
             return
-        resp = delete_json(f"/api/admin/news-sources/{src_id}", headers=self._headers())
+        resp = delete_json(
+            f"/api/admin/news-sources/{src_id}", headers=self._headers()
+        )
         if not (resp and resp.status_code == 200):
             print("Error removing source.")
             logging.error(

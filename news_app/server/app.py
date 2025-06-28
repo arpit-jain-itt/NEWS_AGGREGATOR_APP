@@ -33,8 +33,16 @@ def create_app() -> Flask:
 
     # test auth for swagger
     authorizations = {
-        "Bearer Auth": {"type": "apiKey", "in": "header", "name": "Authorization"},
-        "User ID": {"type": "apiKey", "in": "header", "name": "X-User-ID"},
+        "Bearer Auth": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "Authorization",
+        },
+        "User ID": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "X-User-ID",
+        },
     }
 
     api = Api(
@@ -62,7 +70,10 @@ def create_app() -> Flask:
     @app.errorhandler(Exception)
     def handle_error(error):
         logging.error("Unhandled error: %s", error, exc_info=True)
-        return jsonify({"success": False, "message": "Internal server error."}), 500
+        return (
+            jsonify({"success": False, "message": "Internal server error."}),
+            500,
+        )
 
     return app
 

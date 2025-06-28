@@ -26,14 +26,18 @@ class AuthHandler:
             payload={"email": email, "password": password},
         )
         if response is None:
-            logging.error("No response from server during login for email: %s", email)
+            logging.error(
+                "No response from server during login for email: %s", email
+            )
             return None
 
         if response.status_code == 200:
             user = response.json().get("data")
             if not user:
                 print("Login response missing user data.")
-                logging.error("Login response missing user data for email: %s", email)
+                logging.error(
+                    "Login response missing user data for email: %s", email
+                )
                 return None
             self.current_user = user  # Save for the logged-in user
             print(f"Welcome, {user['username']}!")
@@ -69,11 +73,16 @@ class AuthHandler:
 
         response = post_json(
             "/api/users/register",
-            payload={"username": username, "email": email, "password": password},
+            payload={
+                "username": username,
+                "email": email,
+                "password": password,
+            },
         )
         if response is None:
             logging.error(
-                "No response from server during registration for email: %s", email
+                "No response from server during registration for email: %s",
+                email,
             )
             return
 
@@ -134,7 +143,8 @@ class AuthHandler:
         if users is None:
             print("Failed to fetch users.")
             logging.error(
-                "Failed to fetch users for admin ID: %s", self.current_user["id"]
+                "Failed to fetch users for admin ID: %s",
+                self.current_user["id"],
             )
             return
 
@@ -160,7 +170,9 @@ class AuthHandler:
             if not user_id.isdigit():
                 print("Invalid user ID.")
                 return
-            del_resp = delete_json(f"/api/admin/users/{user_id}", headers=headers)
+            del_resp = delete_json(
+                f"/api/admin/users/{user_id}", headers=headers
+            )
             if del_resp and del_resp.status_code == 200:
                 print("User deleted successfully.")
             else:

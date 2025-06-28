@@ -29,7 +29,9 @@ def filter_by_keywords(
     keywords = [kw.lower() for kw in keywords]
     filtered = []
     for item in items:
-        text = " ".join(str(getattr(item, f, "") or "") for f in fields).lower()
+        text = " ".join(
+            str(getattr(item, f, "") or "") for f in fields
+        ).lower()
         if any(kw in text for kw in keywords):
             filtered.append(item)
     return filtered
@@ -39,19 +41,30 @@ def filter_by_categories(
     items: List[Any], categories: List[str], field: str = "category_name"
 ) -> List[Any]:
     categories = [c.lower() for c in categories]
-    return [item for item in items if getattr(item, field, "").lower() in categories]
+    return [
+        item
+        for item in items
+        if getattr(item, field, "").lower() in categories
+    ]
 
 
-def safe_repo_call(repo: Optional[Any], method: str, *args, default=None, **kwargs):
+def safe_repo_call(
+    repo: Optional[Any], method: str, *args, default=None, **kwargs
+):
     if repo and hasattr(repo, method):
         return getattr(repo, method)(*args, **kwargs)
     return default
 
 
 def compose_email_body(username: str, articles: List[Any]) -> str:
-    body = f"Hello {username},\n\nHere are the latest news articles matching your preferences:\n\n"
+    body = (
+        f"Hello {username},\n\n"
+        "Here are the latest news articles matching your preferences:\n\n"
+    )
     for art in articles:
-        body += f"- {getattr(art, 'title', '')}\n  {getattr(art, 'url', '')}\n\n"
+        body += (
+            f"- {getattr(art, 'title', '')}\n  {getattr(art, 'url', '')}\n\n"
+        )
     body += "Regards,\nNews Aggregator Team"
     return body
 

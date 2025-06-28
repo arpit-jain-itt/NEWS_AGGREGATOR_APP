@@ -5,7 +5,9 @@ SERVER_URL = "http://localhost:5000"
 
 def get_json(route, params=None, headers=None, default=None):
     try:
-        resp = requests.get(f"{SERVER_URL}{route}", params=params, headers=headers)
+        resp = requests.get(
+            f"{SERVER_URL}{route}", params=params, headers=headers
+        )
         return resp.json().get("data", default)
     except requests.exceptions.ConnectionError:
         print("Server is not running.")
@@ -17,7 +19,9 @@ def get_json(route, params=None, headers=None, default=None):
 
 def post_json(route, payload=None, headers=None):
     try:
-        return requests.post(f"{SERVER_URL}{route}", json=payload, headers=headers)
+        return requests.post(
+            f"{SERVER_URL}{route}", json=payload, headers=headers
+        )
     except requests.exceptions.ConnectionError:
         print("Server is not running.")
         return None

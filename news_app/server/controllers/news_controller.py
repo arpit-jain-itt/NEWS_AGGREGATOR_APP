@@ -56,7 +56,9 @@ class Headlines(Resource):
             end_date = start_date
         start_dt = datetime.combine(start_date, datetime.min.time())
         end_dt = datetime.combine(end_date, datetime.max.time())
-        articles = news_service.search_articles("", "", start_dt, end_dt, limit, offset)
+        articles = news_service.search_articles(
+            "", "", start_dt, end_dt, limit, offset
+        )
         return format_response(
             [
                 {
@@ -145,7 +147,9 @@ class SearchArticles(Resource):
 class NewsCategories(Resource):
     def get(self):
         categories = news_service.category_repo.get_all_categories()
-        return format_response([{"id": c.id, "name": c.name} for c in categories], 200)
+        return format_response(
+            [{"id": c.id, "name": c.name} for c in categories], 200
+        )
 
 
 @api.route("/save")
@@ -157,7 +161,9 @@ class SaveArticle(Resource):
             return format_response({"message": err}, 400)
         result = news_service.save_article(data["user_id"], data["article_id"])
         if result == "saved":
-            return format_response({"message": "Article saved successfully."}, 201)
+            return format_response(
+                {"message": "Article saved successfully."}, 201
+            )
         if result == "already_saved":
             return format_response({"message": "Article already saved."}, 409)
         return format_response({"message": "Failed to save article."}, 500)
@@ -166,7 +172,8 @@ class SaveArticle(Resource):
         user_id = flask.request.args.get("user_id")
         article_id = flask.request.args.get("article_id")
         ok, err = require_fields(
-            {"user_id": user_id, "article_id": article_id}, ["user_id", "article_id"]
+            {"user_id": user_id, "article_id": article_id},
+            ["user_id", "article_id"],
         )
         if not ok:
             return format_response({"message": err}, 400)
@@ -176,9 +183,13 @@ class SaveArticle(Resource):
             return format_response({"message": err1 or err2}, 400)
         result = news_service.remove_saved_article(user_id, article_id)
         if result == "deleted":
-            return format_response({"message": "Article removed successfully."}, 200)
+            return format_response(
+                {"message": "Article removed successfully."}, 200
+            )
         if result == "not_found":
-            return format_response({"message": "Saved article not found."}, 404)
+            return format_response(
+                {"message": "Saved article not found."}, 404
+            )
         return format_response({"message": "Failed to remove article."}, 500)
 
 
@@ -190,8 +201,12 @@ class MarkArticleViewed(Resource):
         if not ok:
             return format_response({"message": err}, 400)
         try:
-            news_service.mark_article_viewed(data["user_id"], data["article_id"])
-            return format_response({"message": "Article marked as viewed."}, 200)
+            news_service.mark_article_viewed(
+                data["user_id"], data["article_id"]
+            )
+            return format_response(
+                {"message": "Article marked as viewed."}, 200
+            )
         except Exception:
             return format_response(
                 {"message": "Failed to mark article as viewed."}, 500
@@ -231,7 +246,9 @@ class SavedArticles(Resource):
 class ArticleReaction(Resource):
     def post(self):
         data = flask.request.get_json()
-        ok, err = require_fields(data or {}, ["user_id", "article_id", "is_like"])
+        ok, err = require_fields(
+            data or {}, ["user_id", "article_id", "is_like"]
+        )
         if not ok:
             return format_response({"message": err}, 400)
         result = news_service.react_to_article(
@@ -247,7 +264,8 @@ class ArticleReaction(Resource):
         user_id = flask.request.args.get("user_id")
         article_id = flask.request.args.get("article_id")
         ok, err = require_fields(
-            {"user_id": user_id, "article_id": article_id}, ["user_id", "article_id"]
+            {"user_id": user_id, "article_id": article_id},
+            ["user_id", "article_id"],
         )
         if not ok:
             return format_response({"message": err}, 400)
@@ -290,7 +308,9 @@ class ReactedArticles(Resource):
         if err:
             return format_response({"message": err}, 400)
         if reaction_type not in ("like", "dislike"):
-            return format_response({"message": "type must be 'like' or 'dislike'"}, 400)
+            return format_response(
+                {"message": "type must be 'like' or 'dislike'"}, 400
+            )
         limit, offset = get_pagination(args)
         articles = news_service.get_reacted_articles(
             user_id, reaction_type, limit, offset
@@ -326,7 +346,9 @@ class ArticleReactionCounts(Resource):
 class ReportArticle(Resource):
     def post(self):
         data = flask.request.get_json()
-        ok, err = require_fields(data or {}, ["user_id", "article_id", "reason"])
+        ok, err = require_fields(
+            data or {}, ["user_id", "article_id", "reason"]
+        )
         if not ok:
             return format_response(
                 None,
@@ -355,7 +377,9 @@ class ReportArticle(Resource):
                     None, message="Failed to submit report.", status_code=500
                 )
         except Exception:
-            return format_response(None, message="Error occurred.", status_code=500)
+            return format_response(
+                None, message="Error occurred.", status_code=500
+            )
 
 
 @api.route("/article/<int:article_id>")
@@ -366,7 +390,10 @@ class ArticleDetails(Resource):
         )
         if not article:
             return format_response(
-                None, success=False, message="Article not found", status_code=404
+                None,
+                success=False,
+                message="Article not found",
+                status_code=404,
             )
         return format_response(
             {
@@ -376,7 +403,9 @@ class ArticleDetails(Resource):
                 "content": article.content,
                 "url": article.url,
                 "published_at": (
-                    article.published_at.isoformat() if article.published_at else None
+                    article.published_at.isoformat()
+                    if article.published_at
+                    else None
                 ),
                 "source_id": article.source_id,
                 "category_id": article.category_id,
@@ -391,8 +420,12 @@ class ArticleDetails(Resource):
 class PersonalizedNews(Resource):
     def get(self, user_id):
         limit = flask.request.args.get("limit", 10, type=int)
-        offset = flask.request.args.get("offset", 0, type=int)  # NEW: support offset
-        articles = news_service.get_personalized_articles(user_id, limit, offset)
+        offset = flask.request.args.get(
+            "offset", 0, type=int
+        )  # NEW: support offset
+        articles = news_service.get_personalized_articles(
+            user_id, limit, offset
+        )
         return format_response(
             [
                 {

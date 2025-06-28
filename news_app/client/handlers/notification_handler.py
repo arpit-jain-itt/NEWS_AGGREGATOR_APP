@@ -25,13 +25,17 @@ class NotificationHandler:
 
         # Ask user what they want to do
         update_choice = (
-            input("Do you want to update your notification preferences? (y/n): ")
+            input(
+                "Do you want to update your notification preferences? (y/n): "
+            )
             .strip()
             .lower()
         )
         if update_choice == "n":
             remove_choice = (
-                input("Do you want to remove all notification preferences? (y/n): ")
+                input(
+                    "Do you want to remove all notification preferences? (y/n): "
+                )
                 .strip()
                 .lower()
             )
@@ -43,7 +47,9 @@ class NotificationHandler:
                     "notify_via_email": False,
                     "enabled": False,
                 }
-                resp = post_json("/api/notifications/preferences", payload=payload)
+                resp = post_json(
+                    "/api/notifications/preferences", payload=payload
+                )
                 if resp and resp.ok:
                     print("Notification preferences removed successfully.")
                 else:
@@ -65,11 +71,14 @@ class NotificationHandler:
         else:
             print("(Could not fetch category list.)")
             logging.error(
-                "Could not fetch category list for user %s", self.current_user["id"]
+                "Could not fetch category list for user %s",
+                self.current_user["id"],
             )
 
         # Category input & validation
-        cats_input_raw = input("Enter categories (comma separated): ").strip().lower()
+        cats_input_raw = (
+            input("Enter categories (comma separated): ").strip().lower()
+        )
         if cats_input_raw:
             is_valid, cleaned, invalid = validate_categories(
                 cats_input_raw, valid_names

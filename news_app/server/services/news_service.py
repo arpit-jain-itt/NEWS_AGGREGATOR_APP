@@ -10,7 +10,9 @@ from server.repository.keyword_filter_repository import KeywordFilterRepository
 from server.repository.report_repository import ReportRepository
 from server.repository.user_repository import UserRepository
 from server.models.article_model import Article
-from server.external_apis.thenewsapi_category_mapper import map_article_to_category
+from server.external_apis.thenewsapi_category_mapper import (
+    map_article_to_category,
+)
 from server.external_apis.news_api_factory import get_news_api_client
 from server.external_apis.thenewsapi_com import TheNewsApiClient
 from server.services.personalization_service import PersonalizationService
@@ -55,7 +57,9 @@ class NewsService:
 
     def fetch_and_store_news(self) -> None:
         all_sources = self.source_repo.get_all_sources()
-        primary_source = next((s for s in all_sources if s.name == "News API"), None)
+        primary_source = next(
+            (s for s in all_sources if s.name == "News API"), None
+        )
         secondary_source = next(
             (s for s in all_sources if s.name == "The News API"), None
         )
@@ -90,7 +94,9 @@ class NewsService:
                 if total_inserted < self.MAX_ARTICLES and secondary_source
                 else primary_source.id
             )
-            self.source_repo.update_last_accessed(src_id, get_current_utc_time())
+            self.source_repo.update_last_accessed(
+                src_id, get_current_utc_time()
+            )
 
     def _insert_from_provider(
         self,
@@ -132,7 +138,9 @@ class NewsService:
                 # Category mapping
                 if isinstance(client, TheNewsApiClient):
                     mapped_category = map_article_to_category(article)
-                    category_id = get_category_id(self.category_repo, mapped_category)
+                    category_id = get_category_id(
+                        self.category_repo, mapped_category
+                    )
                 else:
                     category_id = get_category_id(self.category_repo, category)
 
@@ -201,7 +209,9 @@ class NewsService:
         )
         return self._filter_blocked_keywords(articles)
 
-    def _filter_blocked_keywords(self, articles: List[Article]) -> List[Article]:
+    def _filter_blocked_keywords(
+        self, articles: List[Article]
+    ) -> List[Article]:
         if not self.keyword_repo:
             return articles
         blocked_keywords = [
@@ -234,15 +244,21 @@ class NewsService:
         )
         return self._filter_blocked_keywords(articles)
 
-    def react_to_article(self, user_id: int, article_id: int, is_like: bool) -> str:
+    def react_to_article(
+        self, user_id: int, article_id: int, is_like: bool
+    ) -> str:
         current = self.likes_repo.get_user_reaction(user_id, article_id)
         if current is None:
-            return self.likes_repo.upsert_reaction(user_id, article_id, is_like)
+            return self.likes_repo.upsert_reaction(
+                user_id, article_id, is_like
+            )
         if current == is_like:
             return self._delete_reaction_and_return(user_id, article_id)
         return self._delete_reaction_and_return(user_id, article_id)
 
-    def _delete_reaction_and_return(self, user_id: int, article_id: int) -> str:
+    def _delete_reaction_and_return(
+        self, user_id: int, article_id: int
+    ) -> str:
         status = self.likes_repo.delete_reaction(user_id, article_id)
         return "deleted" if status in ("deleted", "not_found") else status
 
@@ -269,7 +285,9 @@ class NewsService:
         )
         return self._filter_blocked_keywords(articles)
 
-    def report_article(self, user_id: int, article_id: int, reason: str) -> bool:
+    def report_article(
+        self, user_id: int, article_id: int, reason: str
+    ) -> bool:
         report = Report(
             id=None,
             user_id=user_id,

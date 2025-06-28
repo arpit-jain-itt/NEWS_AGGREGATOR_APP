@@ -1,7 +1,11 @@
 import logging
 from dateutil.parser import parse as parse_datetime
 from client.utils.pagination_helper import cli_paginate_items
-from client.utils.helpers import get_json, print_article_row, print_article_details
+from client.utils.helpers import (
+    get_json,
+    print_article_row,
+    print_article_details,
+)
 
 
 class SearchHandler:
@@ -20,8 +24,12 @@ class SearchHandler:
         start_date = end_date = None
 
         if choice == "1":
-            keyword = input("Enter keyword to search (leave blank to skip): ").strip()
-            category = input("Enter category to filter (leave blank to skip): ").strip()
+            keyword = input(
+                "Enter keyword to search (leave blank to skip): "
+            ).strip()
+            category = input(
+                "Enter category to filter (leave blank to skip): "
+            ).strip()
             if not keyword and not category:
                 print("Please enter at least a keyword or category.")
                 logging.error(
@@ -35,7 +43,9 @@ class SearchHandler:
             end_date_str = input("Enter end date (YYYY-MM-DD): ").strip()
             try:
                 if start_date_str:
-                    start_date = parse_datetime(start_date_str).date().isoformat()
+                    start_date = (
+                        parse_datetime(start_date_str).date().isoformat()
+                    )
                 if end_date_str:
                     end_date = parse_datetime(end_date_str).date().isoformat()
             except Exception:

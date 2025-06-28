@@ -34,11 +34,15 @@ class NewsCategoryHandler:
 
     def list_categories(self):
         categories = get_json(
-            "/api/categories/admin/categories", headers=self._headers(), default=[]
+            "/api/categories/admin/categories",
+            headers=self._headers(),
+            default=[],
         )
         if not categories:
             print("No categories.")
-            logging.error("No categories found for user %s", self.current_user["id"])
+            logging.error(
+                "No categories found for user %s", self.current_user["id"]
+            )
             return
         print("\nCategories:")
         for cat in categories:
@@ -54,10 +58,12 @@ class NewsCategoryHandler:
                 self.current_user["id"],
             )
             return
-        resp = post_json("/api/categories", {"name": name}, headers=self._headers())
+        resp = post_json(
+            "/api/categories", {"name": name}, headers=self._headers()
+        )
         if resp is None:
             logging.error(
-                "No response from server when adding category '%s' by user %s.",
+                "Server not rsponding when adding category '%s' by user %s",
                 name,
                 self.current_user["id"],
             )
@@ -86,7 +92,9 @@ class NewsCategoryHandler:
                 cat_id,
             )
             return
-        resp = post_json(f"/api/admin/hide-category/{cat_id}", headers=self._headers())
+        resp = post_json(
+            f"/api/admin/hide-category/{cat_id}", headers=self._headers()
+        )
         if not (resp and resp.status_code == 200):
             print("Failed to hide category.")
             logging.error(

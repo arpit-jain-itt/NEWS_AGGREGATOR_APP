@@ -7,14 +7,17 @@ import math
 
 class ScoringHelper:
     """
-    Utility class that provides static methods for scoring articles based on user behavior.
+    Utility class that provides static methods for scoring
+    articles based on user behavior.
     """
 
     @staticmethod
-    def keyword_score(article_keywords: List[str], user_keywords: List[str]) -> float:
+    def keyword_score(
+        article_keywords: List[str], user_keywords: List[str]
+    ) -> float:
         """
-        Score based on keyword overlap between article and user-preferred keywords.
-
+        Score based on keyword overlap between article and
+        user-preferred keywords.
         Returns a float between 0 and 1.
         """
         if not article_keywords or not user_keywords:

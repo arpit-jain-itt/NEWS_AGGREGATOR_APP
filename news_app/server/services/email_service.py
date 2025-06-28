@@ -1,7 +1,13 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.utils import formataddr
-from config.config import SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, EMAIL_FROM
+from config.config import (
+    SMTP_HOST,
+    SMTP_PORT,
+    SMTP_USERNAME,
+    SMTP_PASSWORD,
+    EMAIL_FROM,
+)
 from server.utils.service_helper import send_email_safely
 
 

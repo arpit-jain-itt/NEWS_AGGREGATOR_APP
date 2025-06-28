@@ -32,11 +32,14 @@ class NewsKeywordHandler:
                 print("Invalid choice.")
 
     def list_blocked_keywords(self):
-        keywords = get_json("/api/admin/keywords", headers=self._headers(), default=[])
+        keywords = get_json(
+            "/api/admin/keywords", headers=self._headers(), default=[]
+        )
         if not keywords:
             print("No keywords in blocklist.")
             logging.error(
-                "No blocked keywords found for user %s", self.current_user["id"]
+                "No blocked keywords found for user %s",
+                self.current_user["id"],
             )
             return
         print("\nBlocked Keywords:")
@@ -54,7 +57,9 @@ class NewsKeywordHandler:
             )
             return
         resp = post_json(
-            "/api/admin/keywords", {"keyword": keyword}, headers=self._headers()
+            "/api/admin/keywords",
+            {"keyword": keyword},
+            headers=self._headers(),
         )
         if not (resp and resp.status_code == 201):
             print("Failed to add keyword.")
@@ -76,7 +81,9 @@ class NewsKeywordHandler:
             )
             return
         resp = post_json(
-            "/api/admin/unblock-keyword", {"keyword": keyword}, headers=self._headers()
+            "/api/admin/unblock-keyword",
+            {"keyword": keyword},
+            headers=self._headers(),
         )
         if not (resp and resp.status_code == 200):
             print("Failed to unblock keyword.")
@@ -98,7 +105,9 @@ class NewsKeywordHandler:
             )
             return
         resp = post_json(
-            "/api/admin/delete-keyword", {"keyword": keyword}, headers=self._headers()
+            "/api/admin/delete-keyword",
+            {"keyword": keyword},
+            headers=self._headers(),
         )
         if not (resp and resp.status_code == 200):
             print("Failed to delete keyword.")

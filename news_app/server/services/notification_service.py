@@ -65,12 +65,16 @@ class NotificationService:
 
             # Exclude already viewed
             matched_articles = [
-                art for art in recent_articles if art.id not in viewed_article_ids
+                art
+                for art in recent_articles
+                if art.id not in viewed_article_ids
             ]
 
             # Send email
             if matched_articles and notif.notify_via_email:
-                email_body = compose_email_body(user.username, matched_articles)
+                email_body = compose_email_body(
+                    user.username, matched_articles
+                )
                 self.email_service.send_email(
                     user.email, "Your News Alerts", email_body
                 )
@@ -81,11 +85,17 @@ class NotificationService:
                     user.id, get_current_utc_time()
                 )
 
-    def get_user_notification(self, user_id: int) -> Optional[UserNotification]:
+    def get_user_notification(
+        self, user_id: int
+    ) -> Optional[UserNotification]:
         return self.notification_repo.get_notification_by_user_id(user_id)
 
     def update_user_notification(
-        self, notification_id: int, keywords: str, notify_via_email: bool, enabled: bool
+        self,
+        notification_id: int,
+        keywords: str,
+        notify_via_email: bool,
+        enabled: bool,
     ) -> bool:
         def do_update():
             conn = self.notification_repo.db.connect()
@@ -107,7 +117,11 @@ class NotificationService:
         return handle_db_exception(do_update)
 
     def create_user_notification(
-        self, user_id: int, keywords: str, notify_via_email: bool, enabled: bool
+        self,
+        user_id: int,
+        keywords: str,
+        notify_via_email: bool,
+        enabled: bool,
     ) -> bool:
         def do_create():
             self.notification_repo.create_or_update_notification(

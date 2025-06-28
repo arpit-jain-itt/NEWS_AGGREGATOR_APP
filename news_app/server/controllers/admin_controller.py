@@ -70,7 +70,10 @@ class SetActiveSource(Resource):
 
         success = source_repo.set_active_source(source_id)
         if not success:
-            return {"message": "Failed to set active source", "success": False}, 400
+            return (
+                {"message": "Failed to set active source", "success": False},
+                400,
+            )
 
         return {"message": "Active source updated"}, 200
 
@@ -101,7 +104,9 @@ class NewsSourceCollection(Resource):
             {
                 **asdict(src),
                 "last_accessed": (
-                    src.last_accessed.isoformat() if src.last_accessed else None
+                    src.last_accessed.isoformat()
+                    if src.last_accessed
+                    else None
                 ),
             }
             for src in sources

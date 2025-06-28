@@ -85,9 +85,9 @@ def run():
         sys.exit(1)
 
     auth = AuthHandler()
-    news_article = news_source = news_category = news_reporting = news_keyword = (
-        notifications
-    ) = search = None
+    news_article = news_source = news_category = news_reporting = (
+        news_keyword
+    ) = notifications = search = None
 
     try:
         while True:
@@ -134,9 +134,9 @@ def run():
                         news_keyword.manage_keywords()
                     elif choice == "9":
                         auth.logout()
-                        news_article = news_source = news_category = news_reporting = (
-                            news_keyword
-                        ) = notifications = search = None
+                        news_article = news_source = news_category = (
+                            news_reporting
+                        ) = news_keyword = notifications = search = None
                     else:
                         print("Invalid choice. Please try again.")
                 # User Menu
@@ -169,9 +169,9 @@ def run():
                         news_reporting.list_my_reported_articles()
                     elif choice == "10":
                         auth.logout()
-                        news_article = news_source = news_category = news_reporting = (
-                            news_keyword
-                        ) = notifications = search = None
+                        news_article = news_source = news_category = (
+                            news_reporting
+                        ) = news_keyword = notifications = search = None
                     else:
                         print("Invalid choice. Please try again.")
     except KeyboardInterrupt:

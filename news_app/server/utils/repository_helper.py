@@ -51,18 +51,26 @@ def bulk_insert(conn, query: str, values: List[tuple]):
         conn.rollback()
 
 
-def fetch_one(conn, query: str, params: tuple = (), dictionary=False, buffered=False):
+def fetch_one(
+    conn, query: str, params: tuple = (), dictionary=False, buffered=False
+):
     try:
-        with with_cursor(conn, dictionary=dictionary, buffered=buffered) as cursor:
+        with with_cursor(
+            conn, dictionary=dictionary, buffered=buffered
+        ) as cursor:
             cursor.execute(query, params)
             return cursor.fetchone()
     except Exception:
         return None
 
 
-def fetch_all(conn, query: str, params: tuple = (), dictionary=False, buffered=False):
+def fetch_all(
+    conn, query: str, params: tuple = (), dictionary=False, buffered=False
+):
     try:
-        with with_cursor(conn, dictionary=dictionary, buffered=buffered) as cursor:
+        with with_cursor(
+            conn, dictionary=dictionary, buffered=buffered
+        ) as cursor:
             cursor.execute(query, params)
             return cursor.fetchall()
     except Exception:

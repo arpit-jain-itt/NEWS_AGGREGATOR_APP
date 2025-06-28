@@ -8,7 +8,9 @@ class LikesDislikesRepository:
     def __init__(self, db: DBConnector):
         self.db = db
 
-    def upsert_reaction(self, user_id: int, article_id: int, is_like: bool) -> str:
+    def upsert_reaction(
+        self, user_id: int, article_id: int, is_like: bool
+    ) -> str:
         query_update = """
             UPDATE likes_dislikes
             SET is_like = %s, created_at = NOW()
@@ -24,7 +26,9 @@ class LikesDislikesRepository:
                 conn, query_update, (is_like, user_id, article_id)
             )
             if affected == 0:
-                self._run_write(conn, query_insert, (user_id, article_id, is_like))
+                self._run_write(
+                    conn, query_insert, (user_id, article_id, is_like)
+                )
                 return "created"
             return "updated"
         except Exception:
@@ -33,7 +37,9 @@ class LikesDislikesRepository:
             conn.close()
 
     def delete_reaction(self, user_id: int, article_id: int) -> str:
-        query = "DELETE FROM likes_dislikes WHERE user_id = %s AND article_id = %s"
+        query = (
+            "DELETE FROM likes_dislikes WHERE user_id = %s AND article_id = %s"
+        )
         conn = self.db.connect()
         try:
             affected = self._run_write(conn, query, (user_id, article_id))
@@ -49,10 +55,10 @@ class LikesDislikesRepository:
     def remove_dislike(self, user_id: int, article_id: int) -> str:
         return self._remove_specific_reaction(user_id, article_id, False)
 
-    def get_user_reaction(self, user_id: int, article_id: int) -> Optional[bool]:
-        query = (
-            "SELECT is_like FROM likes_dislikes WHERE user_id = %s AND article_id = %s"
-        )
+    def get_user_reaction(
+        self, user_id: int, article_id: int
+    ) -> Optional[bool]:
+        query = "SELECT is_like FROM likes_dislikes WHERE user_id = %s AND article_id = %s"
         conn = self.db.connect()
         try:
             with with_cursor(conn) as cursor:
@@ -117,7 +123,9 @@ class LikesDislikesRepository:
         """
         conn = self.db.connect()
         try:
-            affected = self._run_write(conn, query, (user_id, article_id, is_like))
+            affected = self._run_write(
+                conn, query, (user_id, article_id, is_like)
+            )
             return "deleted" if affected else "not_found"
         except Exception:
             return "error"

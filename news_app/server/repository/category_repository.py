@@ -13,7 +13,9 @@ class CategoryRepository:
     def __init__(self, db: DBConnector):
         self.db = db
 
-    def get_all_categories(self, include_hidden: bool = False) -> List[Category]:
+    def get_all_categories(
+        self, include_hidden: bool = False
+    ) -> List[Category]:
         conn = self.db.connect()
         try:
             query = "SELECT * FROM categories"
@@ -46,7 +48,8 @@ class CategoryRepository:
             try:
                 with with_cursor(conn) as cursor:
                     cursor.execute(
-                        "SELECT id FROM categories WHERE LOWER(name) = %s", (name_lc,)
+                        "SELECT id FROM categories WHERE LOWER(name) = %s",
+                        (name_lc,),
                     )
                     if cursor.fetchone():
                         return False  # already exists

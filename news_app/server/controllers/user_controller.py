@@ -40,14 +40,19 @@ class Register(Resource):
         data = api.payload
         ok, err = require_fields(data or {}, ["username", "email", "password"])
         if not ok:
-            return format_response(None, success=False, message=err, status_code=400)
+            return format_response(
+                None, success=False, message=err, status_code=400
+            )
 
         user_id = user_service.register_user(
             data["username"], data["email"], data["password"]
         )
         if user_id is None:
             return format_response(
-                None, success=False, message="Email already exists", status_code=400
+                None,
+                success=False,
+                message="Email already exists",
+                status_code=400,
             )
         return format_response(
             {"user_id": user_id},
@@ -87,14 +92,18 @@ class Login(Resource):
             "email": user.email,
             "is_admin": user.is_admin,
         }
-        return format_response(user_data, message="Login successful", status_code=200)
+        return format_response(
+            user_data, message="Login successful", status_code=200
+        )
 
 
 @api.route("/logout")
 class Logout(Resource):
     def post(self):
         session.pop("user_id", None)
-        return format_response(None, message="Logged out successfully", status_code=200)
+        return format_response(
+            None, message="Logged out successfully", status_code=200
+        )
 
 
 @api.route("/users")
@@ -130,7 +139,9 @@ class MyReports(Resource):
             )
         reports = user_service.get_user_reports(user_id)
         if reports is None:
-            return format_response([], message="No reports found", status_code=200)
+            return format_response(
+                [], message="No reports found", status_code=200
+            )
 
         def serialize_report(report):
             d = report.__dict__.copy()
@@ -138,7 +149,9 @@ class MyReports(Resource):
                 d["created_at"] = d["created_at"].isoformat()
             return d
 
-        return format_response([serialize_report(r) for r in reports], status_code=200)
+        return format_response(
+            [serialize_report(r) for r in reports], status_code=200
+        )
 
     def delete(self):
         header_uid = request.headers.get("X-User-ID")
@@ -156,11 +169,16 @@ class MyReports(Resource):
         article_id = data.get("article_id")
         ok, err = require_fields({"article_id": article_id}, ["article_id"])
         if not ok:
-            return format_response(None, success=False, message=err, status_code=400)
+            return format_response(
+                None, success=False, message=err, status_code=400
+            )
         article_id, err = safe_int(article_id, "article_id")
         if err:
             return format_response(
-                None, success=False, message="Invalid article_id", status_code=400
+                None,
+                success=False,
+                message="Invalid article_id",
+                status_code=400,
             )
         success = user_service.remove_user_report(user_id, article_id)
         if success:
@@ -169,5 +187,8 @@ class MyReports(Resource):
             )
         else:
             return format_response(
-                None, success=False, message="Failed to remove report.", status_code=500
+                None,
+                success=False,
+                message="Failed to remove report.",
+                status_code=500,
             )

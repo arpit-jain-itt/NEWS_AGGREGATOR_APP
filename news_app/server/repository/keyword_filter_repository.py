@@ -26,7 +26,9 @@ class KeywordFilterRepository:
 
         return safe_execute(do_add, default=False)
 
-    def get_all_keywords(self, active_only: bool = True) -> List[KeywordFilter]:
+    def get_all_keywords(
+        self, active_only: bool = True
+    ) -> List[KeywordFilter]:
         query = "SELECT * FROM keyword_filters"
         if active_only:
             query += " WHERE active=TRUE"

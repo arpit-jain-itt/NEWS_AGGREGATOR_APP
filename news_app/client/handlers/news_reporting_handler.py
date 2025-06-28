@@ -1,5 +1,10 @@
 import logging
-from client.utils.helpers import get_json, post_json, delete_json, print_article_details
+from client.utils.helpers import (
+    get_json,
+    post_json,
+    delete_json,
+    print_article_details,
+)
 
 
 class NewsReportingHandler:
@@ -16,7 +21,8 @@ class NewsReportingHandler:
         if not reported:
             print("No reported articles.")
             logging.error(
-                "No reported articles found for user %s", self.current_user["id"]
+                "No reported articles found for user %s",
+                self.current_user["id"],
             )
             return
         print("\n--- Reported Articles ---")
@@ -24,7 +30,9 @@ class NewsReportingHandler:
             print(
                 f"{idx}. Article ID: {item['article_id']} | Reports: {item['report_count']}"
             )
-        choice = input("\nEnter number to manage article or 'b' to go back: ").strip()
+        choice = input(
+            "\nEnter number to manage article or 'b' to go back: "
+        ).strip()
         if choice.lower() == "b":
             return
         if not choice.isdigit() or not (1 <= int(choice) <= len(reported)):
@@ -40,12 +48,14 @@ class NewsReportingHandler:
 
     def manage_reported_article(self, article_id):
         article = get_json(
-            f"/api/news/article/{article_id}", headers=self._headers(), default=None
+            f"/api/news/article/{article_id}",
+            headers=self._headers(),
+            default=None,
         )
         if not article:
             print("Failed to fetch article details.")
             logging.error(
-                "Failed to fetch details for reported article ID: %s by user %s",
+                "Can't fetch details for reported article ID: %s by user %s",
                 article_id,
                 self.current_user["id"],
             )
@@ -66,7 +76,8 @@ class NewsReportingHandler:
                     print("Article is already hidden.")
                 else:
                     resp = post_json(
-                        f"/api/admin/hide-article/{article_id}", headers=self._headers()
+                        f"/api/admin/hide-article/{article_id}",
+                        headers=self._headers(),
                     )
                     if resp and resp.status_code == 200:
                         print("Article hidden (blocked).")
@@ -74,13 +85,14 @@ class NewsReportingHandler:
                     else:
                         print("Failed to hide article.")
                         logging.error(
-                            "Failed to hide reported article ID: %s by user %s",
+                            "Can't hide reported article ID: %s by user %s",
                             article_id,
                             self.current_user["id"],
                         )
             elif choice == "3" and article.get("is_hidden"):
                 resp = post_json(
-                    f"/api/admin/unhide-article/{article_id}", headers=self._headers()
+                    f"/api/admin/unhide-article/{article_id}",
+                    headers=self._headers(),
                 )
                 if resp and resp.status_code == 200:
                     print("Article unhidden (unblocked).")
@@ -104,13 +116,16 @@ class NewsReportingHandler:
         if not blocked:
             print("No blocked articles.")
             logging.error(
-                "No blocked articles found for user %s", self.current_user["id"]
+                "No blocked articles found for user %s",
+                self.current_user["id"],
             )
             return
         print("\n--- Blocked Articles ---")
         for idx, item in enumerate(blocked, 1):
             print(f"{idx}. Article ID: {item['id']} | Title: {item['title']}")
-        choice = input("\nEnter number to manage article or 'b' to go back: ").strip()
+        choice = input(
+            "\nEnter number to manage article or 'b' to go back: "
+        ).strip()
         if choice.lower() == "b":
             return
         if not choice.isdigit() or not (1 <= int(choice) <= len(blocked)):
@@ -126,12 +141,14 @@ class NewsReportingHandler:
 
     def manage_blocked_article(self, article_id):
         article = get_json(
-            f"/api/news/article/{article_id}", headers=self._headers(), default=None
+            f"/api/news/article/{article_id}",
+            headers=self._headers(),
+            default=None,
         )
         if not article:
             print("Failed to fetch article details.")
             logging.error(
-                "Failed to fetch details for blocked article ID: %s by user %s",
+                "Can't fetch details for blocked article ID: %s by user %s",
                 article_id,
                 self.current_user["id"],
             )
@@ -159,7 +176,7 @@ class NewsReportingHandler:
                     else:
                         print("Failed to unhide article.")
                         logging.error(
-                            "Failed to unhide blocked article ID: %s by user %s",
+                            "Can't unhide blocked article ID: %s by user %s",
                             article_id,
                             self.current_user["id"],
                         )
@@ -170,12 +187,14 @@ class NewsReportingHandler:
 
     def show_reported_article_details(self, article_id):
         article = get_json(
-            f"/api/news/article/{article_id}", headers=self._headers(), default=None
+            f"/api/news/article/{article_id}",
+            headers=self._headers(),
+            default=None,
         )
         if not article:
             print("Failed to fetch article details.")
             logging.error(
-                "Failed to fetch details for reported article ID: %s by user %s",
+                "Can't fetch details for reported article ID: %s by user %s",
                 article_id,
                 self.current_user["id"],
             )
@@ -190,7 +209,8 @@ class NewsReportingHandler:
             if not reports:
                 print("You have not reported any articles.")
                 logging.error(
-                    "No reported articles found for user %s", self.current_user["id"]
+                    "No reported articles found for user %s",
+                    self.current_user["id"],
                 )
                 return
             print("\n--- My Reported Articles ---")
