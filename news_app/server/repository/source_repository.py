@@ -14,8 +14,14 @@ class SourceRepository:
     def __init__(self, db: DBConnector):
         self.db = db
 
-    def get_active_source(self) -> Optional[Source]:
+    def _get_connection(self):
         conn = self.db.connect()
+        if conn is None or not conn.is_connected():
+            raise RuntimeError("[SourceRepository] DB connection is not available")
+        return conn
+
+    def get_active_source(self) -> Optional[Source]:
+        conn = self._get_connection()
         try:
             query = "SELECT * FROM sources WHERE active = TRUE LIMIT 1"
             with with_cursor(conn, dictionary=True) as cursor:
@@ -26,7 +32,7 @@ class SourceRepository:
             conn.close()
 
     def get_all_sources(self) -> List[Source]:
-        conn = self.db.connect()
+        conn = self._get_connection()
         try:
             query = "SELECT * FROM sources ORDER BY id"
             with with_cursor(conn, dictionary=True) as cursor:
@@ -37,7 +43,7 @@ class SourceRepository:
             conn.close()
 
     def update_last_accessed(self, source_id: int, accessed_at: datetime):
-        conn = self.db.connect()
+        conn = self._get_connection()
         try:
             with with_cursor(conn) as cursor:
                 cursor.execute(
@@ -50,7 +56,11 @@ class SourceRepository:
 
     def set_active_source(self, source_id: int) -> bool:
         def do_set_active():
-            conn = self.db.connect()
+            try:
+                conn = self._get_connection()
+            except RuntimeError as e:
+                print(f"[SourceRepository] {e}")
+                return False
             try:
                 with with_cursor(conn) as cursor:
                     cursor.execute(
@@ -69,7 +79,11 @@ class SourceRepository:
 
     def add_source(self, name: str) -> bool:
         def do_add():
-            conn = self.db.connect()
+            try:
+                conn = self._get_connection()
+            except RuntimeError as e:
+                print(f"[SourceRepository] {e}")
+                return False
             try:
                 with with_cursor(conn, dictionary=True) as cursor:
                     cursor.execute("SELECT 1 FROM sources WHERE name = %s", (name,))
@@ -88,7 +102,11 @@ class SourceRepository:
 
     def remove_source(self, source_id: int) -> bool:
         def do_remove():
-            conn = self.db.connect()
+            try:
+                conn = self._get_connection()
+            except RuntimeError as e:
+                print(f"[SourceRepository] {e}")
+                return False
             try:
                 with with_cursor(conn) as cursor:
                     cursor.execute("DELETE FROM sources WHERE id = %s", (source_id,))

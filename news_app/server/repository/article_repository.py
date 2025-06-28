@@ -148,6 +148,10 @@ class ArticleRepository:
                 )
                 conn.commit()
             return article_id
+        except Exception as e:
+            conn.rollback()
+            print(f"[ERROR] Failed to insert article: {e}")
+            raise
         finally:
             conn.close()
 

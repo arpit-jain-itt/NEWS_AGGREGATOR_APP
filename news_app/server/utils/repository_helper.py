@@ -4,6 +4,8 @@ from contextlib import contextmanager
 
 @contextmanager
 def with_cursor(conn, dictionary=False, buffered=False):
+    if conn is None or not conn.is_connected():
+        raise ConnectionError("MySQL Connection not available")
     cursor = conn.cursor(dictionary=dictionary, buffered=buffered)
     try:
         yield cursor
@@ -41,18 +43,27 @@ def commit_or_rollback(conn, func: Callable, *args, **kwargs):
 
 
 def bulk_insert(conn, query: str, values: List[tuple]):
-    with conn.cursor() as cursor:
-        cursor.executemany(query, values)
-    conn.commit()
+    try:
+        with with_cursor(conn) as cursor:
+            cursor.executemany(query, values)
+        conn.commit()
+    except Exception:
+        conn.rollback()
 
 
 def fetch_one(conn, query: str, params: tuple = (), dictionary=False, buffered=False):
-    with with_cursor(conn, dictionary=dictionary, buffered=buffered) as cursor:
-        cursor.execute(query, params)
-        return cursor.fetchone()
+    try:
+        with with_cursor(conn, dictionary=dictionary, buffered=buffered) as cursor:
+            cursor.execute(query, params)
+            return cursor.fetchone()
+    except Exception:
+        return None
 
 
 def fetch_all(conn, query: str, params: tuple = (), dictionary=False, buffered=False):
-    with with_cursor(conn, dictionary=dictionary, buffered=buffered) as cursor:
-        cursor.execute(query, params)
-        return cursor.fetchall()
+    try:
+        with with_cursor(conn, dictionary=dictionary, buffered=buffered) as cursor:
+            cursor.execute(query, params)
+            return cursor.fetchall()
+    except Exception:
+        return []

@@ -125,7 +125,7 @@ class NewsService:
                 else:
                     category_id = get_category_id(self.category_repo, category)
 
-                self.article_repo.insert_article(
+                article_id = self.article_repo.insert_article(
                     title=article.get("title"),
                     description=article.get("description"),
                     url=article.get("url"),
@@ -134,8 +134,8 @@ class NewsService:
                     category_id=category_id,
                     content=article.get("content") or article.get("snippet"),
                 )
-                inserted += 1
-                break
+                if article_id:
+                    inserted += 1
 
         return inserted
 
