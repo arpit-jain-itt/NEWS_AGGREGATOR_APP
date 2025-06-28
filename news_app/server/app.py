@@ -1,3 +1,6 @@
+import os
+import logging
+from logging.handlers import TimedRotatingFileHandler
 from flask import Flask, jsonify
 from flask_restx import Api
 from server.controllers.user_controller import api as user_ns
@@ -7,7 +10,21 @@ from server.controllers.notification_controller import api as notifications_ns
 from server.controllers.category_controller import api as category_ns
 
 import secrets
-import traceback
+
+os.makedirs("logs", exist_ok=True)
+
+LOG_FILE = "logs/server.log"
+LOG_LEVEL = logging.INFO
+
+handler = TimedRotatingFileHandler(
+    LOG_FILE, when="midnight", interval=1, backupCount=30, encoding="utf-8"
+)
+handler.setFormatter(
+    logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+)
+handler.setLevel(LOG_LEVEL)
+
+logging.basicConfig(level=LOG_LEVEL, handlers=[handler])
 
 
 def create_app() -> Flask:
@@ -44,8 +61,7 @@ def create_app() -> Flask:
     # Global error handling
     @app.errorhandler(Exception)
     def handle_error(error):
-        print("Unhandled error:", error)
-        traceback.print_exc()
+        logging.error("Unhandled error: %s", error, exc_info=True)
         return jsonify({"success": False, "message": "Internal server error."}), 500
 
     return app

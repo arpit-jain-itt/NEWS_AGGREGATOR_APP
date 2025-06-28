@@ -1,3 +1,4 @@
+import logging
 from client.utils.validators import validate_categories
 from client.utils.helpers import get_json, post_json
 
@@ -47,6 +48,10 @@ class NotificationHandler:
                     print("Notification preferences removed successfully.")
                 else:
                     print("Failed to remove notification preferences.")
+                    logging.error(
+                        "Failed to remove notification preferences for user %s",
+                        self.current_user["id"],
+                    )
             else:
                 print("No changes made to notification preferences.")
             return
@@ -59,6 +64,9 @@ class NotificationHandler:
             print(", ".join(valid_names))
         else:
             print("(Could not fetch category list.)")
+            logging.error(
+                "Could not fetch category list for user %s", self.current_user["id"]
+            )
 
         # Category input & validation
         cats_input_raw = input("Enter categories (comma separated): ").strip().lower()
@@ -69,6 +77,11 @@ class NotificationHandler:
             if not is_valid:
                 print(f"Invalid categories: {', '.join(invalid)}")
                 print("Please enter valid category names.")
+                logging.error(
+                    "User %s entered invalid categories: %s",
+                    self.current_user["id"],
+                    ", ".join(invalid),
+                )
                 return
             cats_input = ",".join(cleaned)
         else:
@@ -95,6 +108,10 @@ class NotificationHandler:
             print("Notification preferences updated successfully.")
         else:
             print("Failed to update notification preferences.")
+            logging.error(
+                "Failed to update notification preferences for user %s",
+                self.current_user["id"],
+            )
 
     def _fetch_user_notification(self):
         data = get_json(

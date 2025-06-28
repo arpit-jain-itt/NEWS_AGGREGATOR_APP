@@ -1,3 +1,4 @@
+import logging
 from client.utils.helpers import get_json, post_json, delete_json, print_article_details
 
 
@@ -14,6 +15,9 @@ class NewsReportingHandler:
         )
         if not reported:
             print("No reported articles.")
+            logging.error(
+                "No reported articles found for user %s", self.current_user["id"]
+            )
             return
         print("\n--- Reported Articles ---")
         for idx, item in enumerate(reported, 1):
@@ -25,6 +29,11 @@ class NewsReportingHandler:
             return
         if not choice.isdigit() or not (1 <= int(choice) <= len(reported)):
             print("Invalid choice.")
+            logging.error(
+                "Invalid reported article choice by user %s: %s",
+                self.current_user["id"],
+                choice,
+            )
             return
         article_id = reported[int(choice) - 1]["article_id"]
         self.manage_reported_article(article_id)
@@ -35,6 +44,11 @@ class NewsReportingHandler:
         )
         if not article:
             print("Failed to fetch article details.")
+            logging.error(
+                "Failed to fetch details for reported article ID: %s by user %s",
+                article_id,
+                self.current_user["id"],
+            )
             return
 
         while True:
@@ -59,6 +73,11 @@ class NewsReportingHandler:
                         article["is_hidden"] = True
                     else:
                         print("Failed to hide article.")
+                        logging.error(
+                            "Failed to hide reported article ID: %s by user %s",
+                            article_id,
+                            self.current_user["id"],
+                        )
             elif choice == "3" and article.get("is_hidden"):
                 resp = post_json(
                     f"/api/admin/unhide-article/{article_id}", headers=self._headers()
@@ -68,6 +87,11 @@ class NewsReportingHandler:
                     article["is_hidden"] = False
                 else:
                     print("Failed to unhide article.")
+                    logging.error(
+                        "Failed to unhide reported article ID: %s by user %s",
+                        article_id,
+                        self.current_user["id"],
+                    )
             elif choice == "4":
                 return
             else:
@@ -79,6 +103,9 @@ class NewsReportingHandler:
         )
         if not blocked:
             print("No blocked articles.")
+            logging.error(
+                "No blocked articles found for user %s", self.current_user["id"]
+            )
             return
         print("\n--- Blocked Articles ---")
         for idx, item in enumerate(blocked, 1):
@@ -88,6 +115,11 @@ class NewsReportingHandler:
             return
         if not choice.isdigit() or not (1 <= int(choice) <= len(blocked)):
             print("Invalid choice.")
+            logging.error(
+                "Invalid blocked article choice by user %s: %s",
+                self.current_user["id"],
+                choice,
+            )
             return
         article_id = blocked[int(choice) - 1]["id"]
         self.manage_blocked_article(article_id)
@@ -98,6 +130,11 @@ class NewsReportingHandler:
         )
         if not article:
             print("Failed to fetch article details.")
+            logging.error(
+                "Failed to fetch details for blocked article ID: %s by user %s",
+                article_id,
+                self.current_user["id"],
+            )
             return
 
         while True:
@@ -121,6 +158,11 @@ class NewsReportingHandler:
                         article["is_hidden"] = False
                     else:
                         print("Failed to unhide article.")
+                        logging.error(
+                            "Failed to unhide blocked article ID: %s by user %s",
+                            article_id,
+                            self.current_user["id"],
+                        )
             elif choice == "3":
                 return
             else:
@@ -132,6 +174,11 @@ class NewsReportingHandler:
         )
         if not article:
             print("Failed to fetch article details.")
+            logging.error(
+                "Failed to fetch details for reported article ID: %s by user %s",
+                article_id,
+                self.current_user["id"],
+            )
             return
         print_article_details(article)
 
@@ -142,6 +189,9 @@ class NewsReportingHandler:
             )
             if not reports:
                 print("You have not reported any articles.")
+                logging.error(
+                    "No reported articles found for user %s", self.current_user["id"]
+                )
                 return
             print("\n--- My Reported Articles ---")
             for idx, report in enumerate(reports, 1):
@@ -155,6 +205,11 @@ class NewsReportingHandler:
                 return
             if not choice.isdigit() or not (1 <= int(choice) <= len(reports)):
                 print("Invalid choice.")
+                logging.error(
+                    "Invalid my-reported-article choice by user %s: %s",
+                    self.current_user["id"],
+                    choice,
+                )
                 continue
             article_id = reports[int(choice) - 1]["article_id"]
 
@@ -166,6 +221,11 @@ class NewsReportingHandler:
                 )
                 if not article:
                     print("Failed to fetch article details.")
+                    logging.error(
+                        "Failed to fetch details for my-reported article ID: %s by user %s",
+                        article_id,
+                        self.current_user["id"],
+                    )
                     break
                 print_article_details(article)
                 print("\nOptions:")
@@ -189,8 +249,19 @@ class NewsReportingHandler:
         )
         if resp is None:
             print("Failed to connect to server.")
+            logging.error(
+                "Failed to connect to server when unreporting article ID: %s by user %s",
+                article_id,
+                self.current_user["id"],
+            )
             return
         if resp.status_code == 200:
             print("Report removed successfully.")
         else:
             print("Failed to remove report.")
+            logging.error(
+                "Failed to remove report for article ID: %s by user %s. HTTP %s",
+                article_id,
+                self.current_user["id"],
+                resp.status_code,
+            )

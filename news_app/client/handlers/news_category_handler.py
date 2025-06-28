@@ -1,3 +1,4 @@
+import logging
 from client.utils.helpers import get_json, post_json
 
 
@@ -37,6 +38,7 @@ class NewsCategoryHandler:
         )
         if not categories:
             print("No categories.")
+            logging.error("No categories found for user %s", self.current_user["id"])
             return
         print("\nCategories:")
         for cat in categories:
@@ -47,9 +49,18 @@ class NewsCategoryHandler:
         name = input("\nNew category name: ").strip()
         if not name:
             print("Name required.")
+            logging.error(
+                "User %s tried to add a category with empty name.",
+                self.current_user["id"],
+            )
             return
         resp = post_json("/api/categories", {"name": name}, headers=self._headers())
         if resp is None:
+            logging.error(
+                "No response from server when adding category '%s' by user %s.",
+                name,
+                self.current_user["id"],
+            )
             return
         if resp.status_code == 201:
             print("Category added.")
@@ -57,29 +68,55 @@ class NewsCategoryHandler:
             print("Category already exists.")
         else:
             print(f"Failed to add category (HTTP {resp.status_code}).")
+            logging.error(
+                "Failed to add category '%s' by user %s. HTTP %s",
+                name,
+                self.current_user["id"],
+                resp.status_code,
+            )
 
     def hide_category(self):
         self.list_categories()
         cat_id = input("\nCategory ID to hide: ").strip()
         if not cat_id.isdigit():
             print("Invalid ID.")
+            logging.error(
+                "User %s tried to hide category with invalid ID: %s",
+                self.current_user["id"],
+                cat_id,
+            )
             return
         resp = post_json(f"/api/admin/hide-category/{cat_id}", headers=self._headers())
-        if resp and resp.status_code == 200:
-            print("Category hidden.")
-        else:
+        if not (resp and resp.status_code == 200):
             print("Failed to hide category.")
+            logging.error(
+                "Failed to hide category ID: %s by user %s",
+                cat_id,
+                self.current_user["id"],
+            )
+        else:
+            print("Category hidden.")
 
     def unhide_category(self):
         self.list_categories()
         cat_id = input("\nCategory ID to unhide: ").strip()
         if not cat_id.isdigit():
             print("Invalid ID.")
+            logging.error(
+                "User %s tried to unhide category with invalid ID: %s",
+                self.current_user["id"],
+                cat_id,
+            )
             return
         resp = post_json(
             f"/api/admin/unhide-category/{cat_id}", headers=self._headers()
         )
-        if resp and resp.status_code == 200:
-            print("Category unhidden.")
-        else:
+        if not (resp and resp.status_code == 200):
             print("Failed to unhide category.")
+            logging.error(
+                "Failed to unhide category ID: %s by user %s",
+                cat_id,
+                self.current_user["id"],
+            )
+        else:
+            print("Category unhidden.")

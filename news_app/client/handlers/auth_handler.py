@@ -1,4 +1,5 @@
 import getpass
+import logging
 from client.utils.validators import validate_email, validate_password
 from client.utils.helpers import (
     post_json,
@@ -25,12 +26,14 @@ class AuthHandler:
             payload={"email": email, "password": password},
         )
         if response is None:
+            logging.error("No response from server during login for email: %s", email)
             return None
 
         if response.status_code == 200:
             user = response.json().get("data")
             if not user:
                 print("Login response missing user data.")
+                logging.error("Login response missing user data for email: %s", email)
                 return None
             self.current_user = user  # Save for the logged-in user
             print(f"Welcome, {user['username']}!")
@@ -69,6 +72,9 @@ class AuthHandler:
             payload={"username": username, "email": email, "password": password},
         )
         if response is None:
+            logging.error(
+                "No response from server during registration for email: %s", email
+            )
             return
 
         if response.status_code in (200, 201):
@@ -83,6 +89,11 @@ class AuthHandler:
             print(msg)
         else:
             print("Registration failed. Please try again later.")
+            logging.error(
+                "Registration failed for email: %s. Status code: %s",
+                email,
+                response.status_code,
+            )
 
     def logout(self):
         print("\nLogging out...")
@@ -93,12 +104,21 @@ class AuthHandler:
         headers = {"X-User-ID": str(self.current_user["id"])}
         response = post_json("/api/users/logout", headers=headers)
         if response is None:
+            logging.error(
+                "No response from server during logout for user ID: %s",
+                self.current_user["id"],
+            )
             return
 
         if response.status_code == 200:
             print("Logged out successfully.")
         else:
             print("Logout failed.")
+            logging.error(
+                "Logout failed for user ID: %s. Status code: %s",
+                self.current_user["id"],
+                response.status_code,
+            )
 
         # Clear current user
         self.current_user = None
@@ -113,6 +133,9 @@ class AuthHandler:
         users = get_json("/api/admin/users", headers=headers, default=[])
         if users is None:
             print("Failed to fetch users.")
+            logging.error(
+                "Failed to fetch users for admin ID: %s", self.current_user["id"]
+            )
             return
 
         if not users:
@@ -142,6 +165,11 @@ class AuthHandler:
                 print("User deleted successfully.")
             else:
                 print("Operation failed. Check user ID or permissions.")
+                logging.error(
+                    "Failed to delete user ID: %s by admin ID: %s",
+                    user_id,
+                    self.current_user["id"],
+                )
         elif choice == "2":
             return
         else:

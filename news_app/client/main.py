@@ -1,3 +1,6 @@
+import os
+import logging
+from logging.handlers import TimedRotatingFileHandler
 import sys
 import requests
 from client.handlers.auth_handler import AuthHandler
@@ -10,10 +13,29 @@ from client.handlers.notification_handler import NotificationHandler
 from client.handlers.search_handler import SearchHandler
 
 
+os.makedirs("logs", exist_ok=True)
+
+LOG_FILE = "logs/client.log"
+LOG_LEVEL = logging.INFO
+
+handler = TimedRotatingFileHandler(
+    LOG_FILE, when="midnight", interval=1, backupCount=30, encoding="utf-8"
+)
+handler.setFormatter(
+    logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+)
+handler.setLevel(LOG_LEVEL)
+
+logging.basicConfig(level=LOG_LEVEL, handlers=[handler])
+
+logging.warning("TEST: Client logging setup is working.")
+
+
 def check_server():
     try:
         return requests.get("http://localhost:5000/health").status_code == 200
-    except requests.exceptions.RequestException:
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Server health check failed: {e}")
         return False
 
 
@@ -59,6 +81,7 @@ def run():
         print(
             "Error: Server is not running. Please start the server before launching the client."
         )
+        logging.critical("Server is not running. Exiting client.")
         sys.exit(1)
 
     auth = AuthHandler()
@@ -84,6 +107,7 @@ def run():
                     auth.register()
                 elif choice == "3":
                     print("Exiting application. Goodbye!")
+                    logging.info("User exited the application.")
                     sys.exit(0)
                 else:
                     print("Invalid choice. Please try again.")
@@ -127,8 +151,10 @@ def run():
                             news_article.list_news()
                         except TypeError as e:
                             print(f"\nCategory error: {e}")
+                            logging.error(f"Category error: {e}")
                         except Exception as e:
                             print(f"\nError while listing news: {e}")
+                            logging.error(f"Error while listing news: {e}")
                     elif choice == "4":
                         search.search_articles()
                     elif choice == "5":
@@ -150,9 +176,11 @@ def run():
                         print("Invalid choice. Please try again.")
     except KeyboardInterrupt:
         print("\n\nExiting...")
+        logging.info("User exited the application with keyboard interrupt.")
         sys.exit(0)
     except Exception as e:
         print(f"\nAn unexpected error occurred: {e}")
+        logging.critical(f"Unexpected error: {e}", exc_info=True)
         sys.exit(1)
 
 

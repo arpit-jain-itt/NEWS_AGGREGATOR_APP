@@ -1,3 +1,4 @@
+import logging
 from dateutil.parser import parse as parse_datetime
 from client.utils.pagination_helper import cli_paginate_items
 from client.utils.helpers import get_json, print_article_row, print_article_details
@@ -23,6 +24,10 @@ class SearchHandler:
             category = input("Enter category to filter (leave blank to skip): ").strip()
             if not keyword and not category:
                 print("Please enter at least a keyword or category.")
+                logging.error(
+                    "User %s tried to search articles without keyword or category.",
+                    self.current_user["id"],
+                )
                 return
 
         elif choice == "2":
@@ -35,12 +40,27 @@ class SearchHandler:
                     end_date = parse_datetime(end_date_str).date().isoformat()
             except Exception:
                 print("Invalid date format. Please use YYYY-MM-DD.")
+                logging.error(
+                    "User %s entered invalid date format: start='%s', end='%s'",
+                    self.current_user["id"],
+                    start_date_str,
+                    end_date_str,
+                )
                 return
             if not start_date and not end_date:
                 print("Please enter at least a start or end date.")
+                logging.error(
+                    "User %s tried to search articles without start or end date.",
+                    self.current_user["id"],
+                )
                 return
         else:
             print("Invalid choice.")
+            logging.error(
+                "User %s entered invalid search choice: %s",
+                self.current_user["id"],
+                choice,
+            )
             return
 
         def fetch_fn(limit: int, offset: int):

@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import logging
 from client.utils.pagination_helper import cli_paginate_items
 from client.utils.helpers import (
     get_json,
@@ -30,6 +31,7 @@ class NewsArticleHandler:
         article_id = article.get("id")
         if not article_id:
             print("Missing article ID.")
+            logging.error("Attempted to view article with missing ID.")
             return
         self._article_action_menu(article_id)
 
@@ -58,15 +60,15 @@ class NewsArticleHandler:
             headers=self._headers(),
         )
         if resp is None:
+            logging.error(
+                f"Failed to react to article ID {article_id}: No response from server."
+            )
             return
-        if resp.status_code in (200, 201):
-            try:
-                msg = resp.json().get("data", {}).get("message", "")
-                print(msg or "Action successful.")
-            except Exception:
-                print("Action successful.")
-        else:
+        if resp.status_code not in (200, 201):
             print(f"Failed to react (HTTP {resp.status_code}).")
+            logging.error(
+                f"Failed to react to article ID {article_id}: HTTP {resp.status_code}"
+            )
 
     def _save_article(self, article_id: int):
         resp = post_json(
@@ -75,13 +77,15 @@ class NewsArticleHandler:
             headers=self._headers(),
         )
         if resp is None:
+            logging.error(
+                f"Failed to save article ID {article_id}: No response from server."
+            )
             return
-        if resp.status_code in (200, 201):
-            print("Article saved.")
-        elif resp.status_code == 409:
-            print("Article already saved.")
-        else:
+        if resp.status_code not in (200, 201, 409):
             print(f"Save failed ({resp.status_code}).")
+            logging.error(
+                f"Failed to save article ID {article_id}: HTTP {resp.status_code}"
+            )
 
     def _remove_saved_article(self, article_id: int):
         route = (
@@ -89,13 +93,15 @@ class NewsArticleHandler:
         )
         resp = delete_json(route, headers=self._headers())
         if resp is None:
+            logging.error(
+                f"Failed to remove saved article ID {article_id}: No response from server."
+            )
             return
-        if resp.status_code == 200:
-            print("Article removed from saved list.")
-        elif resp.status_code == 404:
-            print("Article not found in saved list.")
-        else:
+        if resp.status_code not in (200, 404):
             print(f"Failed to remove article ({resp.status_code}).")
+            logging.error(
+                f"Failed to remove saved article ID {article_id}: HTTP {resp.status_code}"
+            )
 
     def report_article(self, article_id: int):
         reason = input("Enter reason for reporting this article: ").strip()
@@ -112,18 +118,23 @@ class NewsArticleHandler:
             headers=self._headers(),
         )
         if resp is None:
+            logging.error(
+                f"Failed to report article ID {article_id}: No response from server."
+            )
             return
-        if resp.status_code == 201:
-            print("Report submitted.")
-        elif resp.status_code == 500:
-            print("Failed to submit report.")
-        else:
+        if resp.status_code not in (201, 500):
             print(f"Failed to report article (HTTP {resp.status_code}).")
+            logging.error(
+                f"Failed to report article ID {article_id}: HTTP {resp.status_code}"
+            )
 
     def list_news(self):
         categories = get_json("/api/categories", headers=self._headers(), default=[])
         if not categories:
             print("No categories available.")
+            logging.error(
+                "No categories available for user %s", self.current_user["id"]
+            )
             return
 
         print("\n--- Categories ---\n0. All")
@@ -133,10 +144,18 @@ class NewsArticleHandler:
         choice = input("Select category number: ").strip()
         if not choice.isdigit():
             print("Invalid input.")
+            logging.error(
+                "Invalid category input by user %s: %s", self.current_user["id"], choice
+            )
             return
         idx = int(choice)
         if not 0 <= idx <= len(categories):
             print("Invalid category selection.")
+            logging.error(
+                "Invalid category selection by user %s: %s",
+                self.current_user["id"],
+                choice,
+            )
             return
 
         category = "" if idx == 0 else categories[idx - 1]["name"]
@@ -173,6 +192,7 @@ class NewsArticleHandler:
         article_id = article.get("id")
         if not article_id:
             print("Missing article ID.")
+            logging.error("Attempted to view saved article with missing ID.")
             return
         self._saved_article_action_menu(article_id)
 

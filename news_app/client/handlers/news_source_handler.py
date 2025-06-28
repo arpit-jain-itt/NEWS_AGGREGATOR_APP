@@ -1,3 +1,4 @@
+import logging
 from client.utils.helpers import get_json, post_json, delete_json
 
 
@@ -35,6 +36,7 @@ class NewsSourceHandler:
         )
         if not sources:
             print("No sources found.")
+            logging.error("No news sources found for user %s", self.current_user["id"])
             return
         print("\n--- News Sources ---")
         for src in sources:
@@ -45,11 +47,20 @@ class NewsSourceHandler:
         name = input("Source name: ").strip()
         if not name:
             print("Name required.")
+            logging.error(
+                "User %s tried to add a news source with empty name.",
+                self.current_user["id"],
+            )
             return
         resp = post_json(
             "/api/admin/news-sources", {"name": name}, headers=self._headers()
         )
         if resp is None:
+            logging.error(
+                "No response from server when adding news source '%s' by user %s.",
+                name,
+                self.current_user["id"],
+            )
             return
         if resp.status_code == 201:
             print("Source added.")
@@ -57,14 +68,30 @@ class NewsSourceHandler:
             print("Source already exists.")
         else:
             print(f"Failed to add source (HTTP {resp.status_code}).")
+            logging.error(
+                "Failed to add news source '%s' by user %s. HTTP %s",
+                name,
+                self.current_user["id"],
+                resp.status_code,
+            )
 
     def remove_source(self):
         src_id = input("Source ID to remove: ").strip()
         if not src_id.isdigit():
             print("Invalid ID.")
+            logging.error(
+                "User %s tried to remove news source with invalid ID: %s",
+                self.current_user["id"],
+                src_id,
+            )
             return
         resp = delete_json(f"/api/admin/news-sources/{src_id}", headers=self._headers())
-        if resp and resp.status_code == 200:
-            print("Source removed.")
-        else:
+        if not (resp and resp.status_code == 200):
             print("Error removing source.")
+            logging.error(
+                "Failed to remove news source ID: %s by user %s",
+                src_id,
+                self.current_user["id"],
+            )
+        else:
+            print("Source removed.")

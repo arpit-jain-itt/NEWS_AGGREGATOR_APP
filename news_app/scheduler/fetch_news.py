@@ -1,3 +1,6 @@
+import logging
+from logging.handlers import TimedRotatingFileHandler
+import os
 from datetime import datetime
 from apscheduler.schedulers.blocking import BlockingScheduler
 from server.repository.db_connector import db
@@ -8,13 +11,28 @@ from server.repository.viewed_article_repository import ViewedArticleRepository
 from server.repository.likes_dislikes_repository import LikesDislikesRepository
 from server.services.news_service import NewsService
 
+os.makedirs("logs", exist_ok=True)
+
+LOG_FILE = "logs/scheduler.log"
+LOG_LEVEL = logging.WARNING
+
+handler = TimedRotatingFileHandler(
+    LOG_FILE, when="midnight", interval=1, backupCount=30, encoding="utf-8"
+)
+handler.setFormatter(
+    logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+)
+handler.setLevel(LOG_LEVEL)
+
+logging.basicConfig(level=LOG_LEVEL, handlers=[handler])
+
 
 def fetch_and_store_news():
-    print(f"[{datetime.now()}] Starting news fetch task...")
+    logging.info("Starting news fetch task...")
 
     connection = db.connect()
     if connection is None:
-        print(f"[{datetime.now()}] Database connection failed.")
+        logging.error("Database connection failed.")
         return
 
     try:
@@ -30,15 +48,16 @@ def fetch_and_store_news():
 
         news_service.fetch_and_store_news()
         connection.commit()
-        print(f"[{datetime.now()}] News fetched and stored successfully.")
+        logging.info("News fetched and stored successfully.")
     except Exception as e:
         connection.rollback()
-        print(f"[{datetime.now()}] Error during news fetching: {e}")
+        logging.error(f"Error during news fetching: {e}", exc_info=True)
     finally:
         db.close(connection)
 
+
 if __name__ == "__main__":
-    print(f"[{datetime.now()}] Scheduler started for fetch_news.py")
+    logging.info("Scheduler started for fetch_news.py")
 
     scheduler = BlockingScheduler()
     scheduler.add_job(
@@ -48,4 +67,4 @@ if __name__ == "__main__":
     try:
         scheduler.start()
     except KeyboardInterrupt:
-        print(f"[{datetime.now()}] Scheduler stopped manually.")
+        logging.warning("Scheduler stopped manually.")
