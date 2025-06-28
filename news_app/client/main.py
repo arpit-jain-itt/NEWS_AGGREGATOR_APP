@@ -28,14 +28,15 @@ def main_menu():
 def user_menu():
     print("\n--- User Menu ---")
     print("1. View Headlines")
-    print("2. View News by Category")
-    print("3. Search Articles")
-    print("4. View Saved Articles")
-    print("5. View Liked Articles")
-    print("6. View Disliked Articles")
-    print("7. Notifications Settings")
-    print("8. My Reported Articles")
-    print("9. Logout")
+    print("2. View Personalized Articles")
+    print("3. View News by Category")
+    print("4. Search Articles")
+    print("5. View Saved Articles")
+    print("6. View Liked Articles")
+    print("7. View Disliked Articles")
+    print("8. Notifications Settings")
+    print("9. My Reported Articles")
+    print("10. Logout")
     return input("Choose an option: ").strip()
 
 
@@ -120,25 +121,27 @@ def run():
                     if choice == "1":
                         news_article.view_headlines()
                     elif choice == "2":
+                        news_article.list_personalized_articles()
+                    elif choice == "3":
                         try:
                             news_article.list_news()
                         except TypeError as e:
                             print(f"\nCategory error: {e}")
                         except Exception as e:
                             print(f"\nError while listing news: {e}")
-                    elif choice == "3":
-                        search.search_articles()
                     elif choice == "4":
-                        news_article.list_saved_articles()
+                        search.search_articles()
                     elif choice == "5":
-                        news_article.list_liked_articles()
+                        news_article.list_saved_articles()
                     elif choice == "6":
-                        news_article.list_disliked_articles()
+                        news_article.list_liked_articles()
                     elif choice == "7":
-                        notifications.manage_notifications()
+                        news_article.list_disliked_articles()
                     elif choice == "8":
-                        news_reporting.list_my_reported_articles()
+                        notifications.manage_notifications()
                     elif choice == "9":
+                        news_reporting.list_my_reported_articles()
+                    elif choice == "10":
                         auth.logout()
                         news_article = news_source = news_category = news_reporting = (
                             news_keyword

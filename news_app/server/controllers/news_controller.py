@@ -9,6 +9,7 @@ from server.repository.viewed_article_repository import ViewedArticleRepository
 from server.repository.likes_dislikes_repository import LikesDislikesRepository
 from server.repository.report_repository import ReportRepository
 from server.repository.keyword_filter_repository import KeywordFilterRepository
+from server.repository.user_repository import UserRepository
 from server.utils.response_formatter import format_response
 from server.repository.db_connector import db
 from server.utils.controller_helper import (
@@ -28,6 +29,7 @@ news_service = NewsService(
     LikesDislikesRepository(db),
     keyword_repo=KeywordFilterRepository(db),
     report_repo=ReportRepository(db),
+    user_repo=UserRepository(db),
 )
 
 
@@ -382,4 +384,33 @@ class ArticleDetails(Resource):
                 "category_name": getattr(article, "category_name", None),
             },
             status_code=200,
+        )
+
+
+@api.route("/personalized/<int:user_id>")
+class PersonalizedNews(Resource):
+    def get(self, user_id):
+        limit = flask.request.args.get("limit", 10, type=int)
+        offset = flask.request.args.get("offset", 0, type=int)  # NEW: support offset
+        articles = news_service.get_personalized_articles(user_id, limit, offset)
+        return format_response(
+            [
+                {
+                    "id": a.get("id"),
+                    "title": a.get("title"),
+                    "description": a.get("description"),
+                    "content": a.get("content"),
+                    "url": a.get("url"),
+                    "published_at": (
+                        a.get("published_at").isoformat()
+                        if isinstance(a.get("published_at"), datetime)
+                        else str(a.get("published_at"))
+                    ),
+                    "source_id": a.get("source_id"),
+                    "category_id": a.get("category_id"),
+                    "category_name": a.get("category_name"),
+                }
+                for a in articles
+            ],
+            200,
         )

@@ -389,3 +389,27 @@ class ArticleRepository:
             return self._build_articles(rows)
         finally:
             conn.close()
+
+    # PERSONALIZATION SUPPORT
+
+    def get_recent_visible_articles(self, limit: int = 100) -> List[dict]:
+        """
+        Returns recent, visible articles as a list of dicts (for scoring).
+        """
+        conn = self.db.connect()
+        try:
+            query = """
+                SELECT a.*, c.name AS category_name
+                FROM articles a
+                LEFT JOIN categories c ON a.category_id = c.id
+                WHERE a.is_hidden = FALSE
+                ORDER BY a.published_at DESC
+                LIMIT %s
+            """
+            params = [limit]
+            with with_cursor(conn, dictionary=True) as cursor:
+                cursor.execute(query, params)
+                rows = cursor.fetchall()
+            return rows
+        finally:
+            conn.close()

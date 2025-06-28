@@ -264,3 +264,19 @@ class NewsArticleHandler:
         self.paginate_and_display(
             "Disliked Articles", fetch, on_select=self.view_article
         )
+
+    # Personalized Articles
+    def list_personalized_articles(self):
+        """
+        Fetch and display personalized articles for the current user.
+        """
+
+        def fetch(limit, offset):
+            return get_json(
+                f"/api/news/personalized/{self.current_user['id']}",
+                {"limit": limit, "offset": offset},
+                headers=self._headers(),
+                default=[],
+            )
+
+        self.paginate_and_display("Personalized Articles", fetch)

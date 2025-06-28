@@ -8,10 +8,12 @@ from server.repository.viewed_article_repository import ViewedArticleRepository
 from server.repository.likes_dislikes_repository import LikesDislikesRepository
 from server.repository.keyword_filter_repository import KeywordFilterRepository
 from server.repository.report_repository import ReportRepository
+from server.repository.user_repository import UserRepository
 from server.models.article_model import Article
 from server.external_apis.thenewsapi_category_mapper import map_article_to_category
 from server.external_apis.news_api_factory import get_news_api_client
 from server.external_apis.thenewsapi_com import TheNewsApiClient
+from server.services.personalization_service import PersonalizationService
 from config.config import REPORT_THRESHOLD
 from server.utils.service_helper import (
     parse_ts,
@@ -33,6 +35,7 @@ class NewsService:
         likes_repo: LikesDislikesRepository,
         keyword_repo: Optional[KeywordFilterRepository] = None,
         report_repo: Optional[ReportRepository] = None,
+        user_repo: Optional[UserRepository] = None,
     ):
         self.article_repo = article_repo
         self.category_repo = category_repo
@@ -41,6 +44,14 @@ class NewsService:
         self.likes_repo = likes_repo
         self.keyword_repo = keyword_repo
         self.report_repo = report_repo
+        self.user_repo = user_repo
+
+        if self.user_repo is not None and self.article_repo is not None:
+            self.personalization_service = PersonalizationService(
+                self.user_repo, self.article_repo
+            )
+        else:
+            self.personalization_service = None
 
     def fetch_and_store_news(self) -> None:
         all_sources = self.source_repo.get_all_sources()
@@ -278,3 +289,16 @@ class NewsService:
 
     def get_article_reactions_count(self, article_id: int) -> dict:
         return self.likes_repo.get_article_reactions_count(article_id)
+
+    # PERSONALIZATION UPDATED METHOD
+    def get_personalized_articles(
+        self, user_id: int, limit: int = 10, offset: int = 0
+    ) -> List[dict]:
+        """
+        Returns top-N personalized articles for a user, with pagination.
+        """
+        if not self.personalization_service:
+            return []
+        return self.personalization_service.get_personalized_articles(
+            user_id, limit=limit, offset=offset
+        )
