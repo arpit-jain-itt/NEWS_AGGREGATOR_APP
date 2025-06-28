@@ -58,21 +58,33 @@ class NotificationPreferences(Resource):
         existing = notification_repo.get_notification_preferences(user_id) or {}
         decoded_existing = decode_preferences(existing.get("keywords", ""))
 
-        categories_csv = data.get(
-            "categories",
-            ",".join(decoded_existing["categories"]),
-        )
-        keywords_csv = data.get(
-            "keywords",
-            ",".join(decoded_existing["keywords"]),
-        )
+        # Handle "remove all" case: if categories or keywords are empty, treat as empty list
+        categories_csv = data.get("categories", None)
+        keywords_csv = data.get("keywords", None)
+
+        if categories_csv is None or categories_csv.strip() == "":
+            user_cats = []
+        else:
+            user_cats = [
+                c.strip().lower() for c in categories_csv.split(",") if c.strip()
+            ]
+
+        if keywords_csv is None or keywords_csv.strip() == "":
+            user_keys = []
+        else:
+            user_keys = [k.strip() for k in keywords_csv.split(",") if k.strip()]
+
         notify_via_email = data.get(
             "notify_via_email", existing.get("notify_via_email", True)
         )
         enabled = data.get("enabled", existing.get("enabled", True))
 
+        # If both categories and keywords are empty, and enabled is False, treat as "remove all"
+        if not user_cats and not user_keys:
+            notify_via_email = False
+            enabled = False
+
         valid_set = {cat.name.lower() for cat in category_repo.get_all_categories()}
-        user_cats = [c.strip().lower() for c in categories_csv.split(",") if c.strip()]
         invalid = [c for c in user_cats if c not in valid_set]
 
         if invalid:
@@ -87,8 +99,9 @@ class NotificationPreferences(Resource):
             )
 
         cleaned_categories_csv = ",".join(user_cats)
+        cleaned_keywords_csv = ",".join(user_keys)
 
-        encoded_blob = encode_preferences(cleaned_categories_csv, keywords_csv)
+        encoded_blob = encode_preferences(cleaned_categories_csv, cleaned_keywords_csv)
         result = notification_repo.update_notification_preferences(
             user_id, encoded_blob, notify_via_email, enabled
         )

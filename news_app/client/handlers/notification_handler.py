@@ -22,6 +22,35 @@ class NotificationHandler:
         print(f"Notify via email:   {'Yes' if email_on else 'No'}")
         print(f"Notifications on:  {'Yes' if enabled else 'No'}\n")
 
+        # Ask user what they want to do
+        update_choice = (
+            input("Do you want to update your notification preferences? (y/n): ")
+            .strip()
+            .lower()
+        )
+        if update_choice == "n":
+            remove_choice = (
+                input("Do you want to remove all notification preferences? (y/n): ")
+                .strip()
+                .lower()
+            )
+            if remove_choice == "y":
+                payload = {
+                    "user_id": self.current_user["id"],
+                    "categories": "",
+                    "keywords": "",
+                    "notify_via_email": False,
+                    "enabled": False,
+                }
+                resp = post_json("/api/notifications/preferences", payload=payload)
+                if resp and resp.ok:
+                    print("Notification preferences removed successfully.")
+                else:
+                    print("Failed to remove notification preferences.")
+            else:
+                print("No changes made to notification preferences.")
+            return
+
         # Display category list
         all_categories = self._fetch_categories()
         valid_names = [cat["name"].lower() for cat in all_categories]
