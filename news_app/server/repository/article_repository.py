@@ -9,82 +9,66 @@ class ArticleRepository:
     def __init__(self, db: DBConnector):
         self.db = db
 
-    def get_article_by_id(
-        self, article_id: int, include_hidden: bool = False
-    ) -> Optional[Article]:
+    def _query_articles(self, query: str, params: list) -> List[Article]:
         conn = self.db.connect()
         try:
-            query = """
-                SELECT a.*, c.name AS category_name
-                FROM articles a
-                LEFT JOIN categories c ON a.category_id = c.id
-                WHERE a.id = %s
-            """
-            params = [article_id]
-            if not include_hidden:
-                query += " AND a.is_hidden = FALSE"
-            with with_cursor(conn, dictionary=True) as cursor:
-                cursor.execute(query, params)
-                row = cursor.fetchone()
-            if row:
-                category_name = row.pop("category_name", None)
-                article = Article(**row)
-                setattr(article, "category_name", category_name)
-                return article
-            return None
-        finally:
-            conn.close()
-
-    def get_articles_by_category(
-        self,
-        category_id: int,
-        limit=20,
-        offset=0,
-        include_hidden: bool = False,
-    ) -> List[Article]:
-        conn = self.db.connect()
-        try:
-            query = """
-                SELECT a.*, c.name AS category_name
-                FROM articles a
-                LEFT JOIN categories c ON a.category_id = c.id
-                WHERE a.category_id = %s
-            """
-            params = [category_id]
-            if not include_hidden:
-                query += " AND a.is_hidden = FALSE"
-            query += " ORDER BY a.published_at DESC LIMIT %s OFFSET %s"
-            params.extend([limit, offset])
             with with_cursor(conn, dictionary=True) as cursor:
                 cursor.execute(query, params)
                 rows = cursor.fetchall()
             return self._build_articles(rows)
         finally:
             conn.close()
+
+    def _build_articles(self, rows: List[dict]) -> List[Article]:
+        articles = []
+        for row in rows:
+            category_name = row.pop("category_name", None)
+            article = Article(**row)
+            setattr(article, "category_name", category_name)
+            articles.append(article)
+        return articles
+
+    def get_article_by_id(
+        self, article_id: int, include_hidden: bool = False
+    ) -> Optional[Article]:
+        query = (
+            "SELECT a.*, c.name AS category_name FROM articles a LEFT JOIN categories c ON a.category_id = c.id "
+            "WHERE a.id = %s"
+        )
+        params = [article_id]
+        if not include_hidden:
+            query += " AND a.is_hidden = FALSE"
+        articles = self._query_articles(query, params)
+        return articles[0] if articles else None
+
+    def get_articles_by_category(
+        self, category_id: int, limit=20, offset=0, include_hidden: bool = False
+    ) -> List[Article]:
+        query = (
+            "SELECT a.*, c.name AS category_name FROM articles a LEFT JOIN categories c ON a.category_id = c.id "
+            "WHERE a.category_id = %s"
+        )
+        params = [category_id]
+        if not include_hidden:
+            query += " AND a.is_hidden = FALSE"
+        query += " ORDER BY a.published_at DESC LIMIT %s OFFSET %s"
+        params.extend([limit, offset])
+        return self._query_articles(query, params)
 
     def get_articles_by_ids(
         self, article_ids: List[int], include_hidden: bool = False
     ) -> List[Article]:
         if not article_ids:
             return []
-        conn = self.db.connect()
-        try:
-            format_strings = ",".join(["%s"] * len(article_ids))
-            query = f"""
-                SELECT a.*, c.name AS category_name
-                FROM articles a
-                LEFT JOIN categories c ON a.category_id = c.id
-                WHERE a.id IN ({format_strings})
-            """
-            params = list(article_ids)
-            if not include_hidden:
-                query += " AND a.is_hidden = FALSE"
-            with with_cursor(conn, dictionary=True) as cursor:
-                cursor.execute(query, tuple(params))
-                rows = cursor.fetchall()
-            return self._build_articles(rows)
-        finally:
-            conn.close()
+        format_strings = ",".join(["%s"] * len(article_ids))
+        query = (
+            f"SELECT a.*, c.name AS category_name FROM articles a LEFT JOIN categories c ON a.category_id = c.id "
+            f"WHERE a.id IN ({format_strings})"
+        )
+        params = list(article_ids)
+        if not include_hidden:
+            query += " AND a.is_hidden = FALSE"
+        return self._query_articles(query, params)
 
     def get_next_article_id(self) -> int:
         conn = self.db.connect()
@@ -102,8 +86,7 @@ class ArticleRepository:
 
             next_id = max(max_article_id, last_used) + 1
             cursor.execute(
-                "UPDATE article_sequence SET last_used = %s WHERE id = 1",
-                (next_id,),
+                "UPDATE article_sequence SET last_used = %s WHERE id = 1", (next_id,)
             )
             conn.commit()
             return next_id
@@ -127,18 +110,16 @@ class ArticleRepository:
         conn = self.db.connect()
         try:
             with with_cursor(conn, dictionary=True) as cursor:
-                cursor.execute(
-                    "SELECT id FROM articles WHERE url = %s", (url,)
-                )
+                cursor.execute("SELECT id FROM articles WHERE url = %s", (url,))
                 existing = cursor.fetchone()
             if existing:
                 return existing["id"]
 
             article_id = self.get_next_article_id()
-            query = """
-                INSERT INTO articles (id, title, description, content, url, published_at, source_id, category_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """
+            query = (
+                "INSERT INTO articles (id, title, description, content, url, published_at, source_id, category_id) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+            )
             with with_cursor(conn) as insert_cursor:
                 insert_cursor.execute(
                     query,
@@ -165,23 +146,14 @@ class ArticleRepository:
     def get_latest_articles(
         self, limit=20, offset=0, include_hidden: bool = False
     ) -> List[Article]:
-        conn = self.db.connect()
-        try:
-            query = """
-                SELECT a.*, c.name AS category_name
-                FROM articles a
-                LEFT JOIN categories c ON a.category_id = c.id
-            """
-            if not include_hidden:
-                query += " WHERE a.is_hidden = FALSE"
-            query += " ORDER BY a.published_at DESC LIMIT %s OFFSET %s"
-            params = [limit, offset]
-            with with_cursor(conn, dictionary=True) as cursor:
-                cursor.execute(query, params)
-                rows = cursor.fetchall()
-            return self._build_articles(rows)
-        finally:
-            conn.close()
+        query = (
+            "SELECT a.*, c.name AS category_name FROM articles a LEFT JOIN categories c ON a.category_id = c.id "
+            "ORDER BY a.published_at DESC LIMIT %s OFFSET %s"
+        )
+        params = [limit, offset]
+        if not include_hidden:
+            query = query.replace("ORDER BY", "WHERE a.is_hidden = FALSE ORDER BY")
+        return self._query_articles(query, params)
 
     def search_articles(
         self,
@@ -193,52 +165,37 @@ class ArticleRepository:
         offset: int = 0,
         include_hidden: bool = False,
     ) -> List[Article]:
-        conn = self.db.connect()
-        try:
-            query = """
-                SELECT a.*, c.name AS category_name
-                FROM articles a
-                LEFT JOIN categories c ON a.category_id = c.id
-                WHERE 1=1
-            """
-            params = []
+        query = (
+            "SELECT a.*, c.name AS category_name FROM articles a LEFT JOIN categories c ON a.category_id = c.id "
+            "WHERE 1=1"
+        )
+        params = []
 
-            if not include_hidden:
-                query += " AND a.is_hidden = FALSE"
-
-            if category_id is not None:
-                query += " AND a.category_id = %s"
-                params.append(category_id)
-
-            if keyword:
-                query += " AND (LOWER(a.title) LIKE %s OR LOWER(a.description) LIKE %s OR LOWER(a.content) LIKE %s)"
-                like_keyword = f"%{keyword.lower()}%"
-                params.extend([like_keyword, like_keyword, like_keyword])
-
-            if start_date and start_date.tzinfo is None:
-                start_date = start_date.replace(tzinfo=timezone.utc)
-            if end_date and end_date.tzinfo is None:
-                end_date = end_date.replace(tzinfo=timezone.utc)
-
-            if start_date and end_date:
-                query += " AND a.published_at BETWEEN %s AND %s"
-                params.extend([start_date, end_date])
-            elif start_date:
-                query += " AND a.published_at >= %s"
-                params.append(start_date)
-            elif end_date:
-                query += " AND a.published_at <= %s"
-                params.append(end_date)
-
-            query += " ORDER BY a.published_at DESC LIMIT %s OFFSET %s"
-            params.extend([limit, offset])
-
-            with with_cursor(conn, dictionary=True) as cursor:
-                cursor.execute(query, tuple(params))
-                rows = cursor.fetchall()
-            return self._build_articles(rows)
-        finally:
-            conn.close()
+        if not include_hidden:
+            query += " AND a.is_hidden = FALSE"
+        if category_id is not None:
+            query += " AND a.category_id = %s"
+            params.append(category_id)
+        if keyword:
+            query += " AND (LOWER(a.title) LIKE %s OR LOWER(a.description) LIKE %s OR LOWER(a.content) LIKE %s)"
+            like_keyword = f"%{keyword.lower()}%"
+            params.extend([like_keyword, like_keyword, like_keyword])
+        if start_date and start_date.tzinfo is None:
+            start_date = start_date.replace(tzinfo=timezone.utc)
+        if end_date and end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+        if start_date and end_date:
+            query += " AND a.published_at BETWEEN %s AND %s"
+            params.extend([start_date, end_date])
+        elif start_date:
+            query += " AND a.published_at >= %s"
+            params.append(start_date)
+        elif end_date:
+            query += " AND a.published_at <= %s"
+            params.append(end_date)
+        query += " ORDER BY a.published_at DESC LIMIT %s OFFSET %s"
+        params.extend([limit, offset])
+        return self._query_articles(query, params)
 
     def is_article_saved_by_user(self, user_id: int, article_id: int) -> bool:
         conn = self.db.connect()
@@ -293,26 +250,16 @@ class ArticleRepository:
     def get_saved_articles_by_user(
         self, user_id: int, limit=20, offset=0, include_hidden: bool = False
     ) -> List[Article]:
-        conn = self.db.connect()
-        try:
-            query = """
-                SELECT a.*, c.name AS category_name
-                FROM saved_articles sa
-                JOIN articles a ON sa.article_id = a.id
-                LEFT JOIN categories c ON a.category_id = c.id
-                WHERE sa.user_id = %s
-            """
-            params = [user_id]
-            if not include_hidden:
-                query += " AND a.is_hidden = FALSE"
-            query += " ORDER BY sa.saved_at DESC LIMIT %s OFFSET %s"
-            params.extend([limit, offset])
-            with with_cursor(conn, dictionary=True) as cursor:
-                cursor.execute(query, params)
-                rows = cursor.fetchall()
-            return self._build_articles(rows)
-        finally:
-            conn.close()
+        query = (
+            "SELECT a.*, c.name AS category_name FROM saved_articles sa JOIN articles a ON sa.article_id = a.id "
+            "LEFT JOIN categories c ON a.category_id = c.id WHERE sa.user_id = %s"
+        )
+        params = [user_id]
+        if not include_hidden:
+            query += " AND a.is_hidden = FALSE"
+        query += " ORDER BY sa.saved_at DESC LIMIT %s OFFSET %s"
+        params.extend([limit, offset])
+        return self._query_articles(query, params)
 
     def get_headlines(
         self,
@@ -322,38 +269,22 @@ class ArticleRepository:
         offset: int = 0,
         include_hidden: bool = False,
     ) -> List[Article]:
-        conn = self.db.connect()
-        try:
-            query = """
-                SELECT a.*, c.name AS category_name
-                FROM articles a
-                LEFT JOIN categories c ON a.category_id = c.id
-                WHERE 1 = 1
-            """
-            params = []
-
-            if not include_hidden:
-                query += " AND a.is_hidden = FALSE"
-
-            if start_date and end_date:
-                query += " AND DATE(a.published_at) BETWEEN %s AND %s"
-                params.extend([start_date, end_date])
-            elif start_date:
-                query += " AND DATE(a.published_at) >= %s"
-                params.append(start_date)
-            elif end_date:
-                query += " AND DATE(a.published_at) <= %s"
-                params.append(end_date)
-
-            query += " ORDER BY a.published_at DESC LIMIT %s OFFSET %s"
-            params.extend([limit, offset])
-
-            with with_cursor(conn, dictionary=True) as cursor:
-                cursor.execute(query, tuple(params))
-                rows = cursor.fetchall()
-            return self._build_articles(rows)
-        finally:
-            conn.close()
+        query = "SELECT a.*, c.name AS category_name FROM articles a LEFT JOIN categories c ON a.category_id = c.id WHERE 1 = 1"
+        params = []
+        if not include_hidden:
+            query += " AND a.is_hidden = FALSE"
+        if start_date and end_date:
+            query += " AND DATE(a.published_at) BETWEEN %s AND %s"
+            params.extend([start_date, end_date])
+        elif start_date:
+            query += " AND DATE(a.published_at) >= %s"
+            params.append(start_date)
+        elif end_date:
+            query += " AND DATE(a.published_at) <= %s"
+            params.append(end_date)
+        query += " ORDER BY a.published_at DESC LIMIT %s OFFSET %s"
+        params.extend([limit, offset])
+        return self._query_articles(query, params)
 
     def set_article_hidden(self, article_id: int, is_hidden: bool) -> bool:
         conn = self.db.connect()
@@ -371,48 +302,21 @@ class ArticleRepository:
         finally:
             conn.close()
 
-    def _build_articles(self, rows: List[dict]) -> List[Article]:
-        articles = []
-        for row in rows:
-            category_name = row.pop("category_name", None)
-            article = Article(**row)
-            setattr(article, "category_name", category_name)
-            articles.append(article)
-        return articles
-
     def get_blocked_articles(self) -> List[Article]:
-        conn = self.db.connect()
-        try:
-            query = """
-                SELECT a.*, c.name AS category_name
-                FROM articles a
-                LEFT JOIN categories c ON a.category_id = c.id
-                WHERE a.is_hidden = TRUE
-                ORDER BY a.published_at DESC
-            """
-            with with_cursor(conn, dictionary=True) as cursor:
-                cursor.execute(query)
-                rows = cursor.fetchall()
-            return self._build_articles(rows)
-        finally:
-            conn.close()
-
-    # PERSONALIZATION SUPPORT
+        query = (
+            "SELECT a.*, c.name AS category_name FROM articles a LEFT JOIN categories c ON a.category_id = c.id "
+            "WHERE a.is_hidden = TRUE ORDER BY a.published_at DESC"
+        )
+        params = []
+        return self._query_articles(query, params)
 
     def get_recent_visible_articles(self, limit: int = 100) -> List[dict]:
-        """
-        Returns recent, visible articles as a list of dicts (for scoring).
-        """
         conn = self.db.connect()
         try:
-            query = """
-                SELECT a.*, c.name AS category_name
-                FROM articles a
-                LEFT JOIN categories c ON a.category_id = c.id
-                WHERE a.is_hidden = FALSE
-                ORDER BY a.published_at DESC
-                LIMIT %s
-            """
+            query = (
+                "SELECT a.*, c.name AS category_name FROM articles a LEFT JOIN categories c ON a.category_id = c.id "
+                "WHERE a.is_hidden = FALSE ORDER BY a.published_at DESC LIMIT %s"
+            )
             params = [limit]
             with with_cursor(conn, dictionary=True) as cursor:
                 cursor.execute(query, params)

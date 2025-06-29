@@ -5,7 +5,8 @@ from flask import Flask, jsonify
 from flask_restx import Api
 from server.controllers.user_controller import api as user_ns
 from server.controllers.admin_controller import api as admin_ns
-from server.controllers.news_controller import api as news_ns
+from server.controllers.news_articles_controller import api as news_articles_ns
+from server.controllers.news_user_controller import api as news_user_ns
 from server.controllers.notification_controller import api as notifications_ns
 from server.controllers.category_controller import api as category_ns
 
@@ -57,7 +58,8 @@ def create_app() -> Flask:
 
     api.add_namespace(user_ns, path="/api/users")
     api.add_namespace(admin_ns, path="/api/admin")
-    api.add_namespace(news_ns, path="/api/news")
+    api.add_namespace(news_articles_ns, path="/api/news")
+    api.add_namespace(news_user_ns, path="/api/news")
     api.add_namespace(notifications_ns, path="/api/notifications")
     api.add_namespace(category_ns, path="/api/categories")
 

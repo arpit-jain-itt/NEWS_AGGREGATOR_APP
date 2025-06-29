@@ -1,5 +1,4 @@
 import flask
-from datetime import datetime
 from flask_restx import Namespace, Resource
 from server.services.news_service import NewsService
 from server.repository.article_repository import ArticleRepository
@@ -15,11 +14,10 @@ from server.repository.db_connector import db
 from server.utils.controller_helper import (
     get_pagination,
     safe_int,
-    parse_iso_date,
     require_fields,
 )
 
-api = Namespace("news", description="News operations")
+api = Namespace("news-user", description="News User Interaction operations")
 
 news_service = NewsService(
     ArticleRepository(db),
@@ -33,125 +31,6 @@ news_service = NewsService(
 )
 
 
-@api.route("/headlines")
-class Headlines(Resource):
-    def get(self):
-        args = flask.request.args
-        start_str = args.get("start_date")
-        end_str = args.get("end_date")
-        limit, offset = get_pagination(args)
-        if start_str:
-            start_date, err = parse_iso_date(start_str, "start_date")
-            if err:
-                return format_response({"message": err}, 400, False)
-            start_date = start_date.date()
-        else:
-            start_date = datetime.now().date()
-        if end_str:
-            end_date, err = parse_iso_date(end_str, "end_date")
-            if err:
-                return format_response({"message": err}, 400, False)
-            end_date = end_date.date()
-        else:
-            end_date = start_date
-        start_dt = datetime.combine(start_date, datetime.min.time())
-        end_dt = datetime.combine(end_date, datetime.max.time())
-        articles = news_service.search_articles(
-            "", "", start_dt, end_dt, limit, offset
-        )
-        return format_response(
-            [
-                {
-                    "id": a.id,
-                    "title": a.title,
-                    "description": a.description,
-                    "content": a.content,
-                    "url": a.url,
-                    "published_at": a.published_at.isoformat(),
-                    "source_id": a.source_id,
-                    "category_id": a.category_id,
-                }
-                for a in articles
-            ],
-            200,
-        )
-
-
-@api.route("/latest")
-class LatestNews(Resource):
-    def get(self):
-        args = flask.request.args
-        category = args.get("category")
-        limit, offset = get_pagination(args)
-        articles = news_service.get_latest_articles(category, limit, offset)
-        return format_response(
-            [
-                {
-                    "id": a.id,
-                    "title": a.title,
-                    "description": a.description,
-                    "content": a.content,
-                    "url": a.url,
-                    "published_at": a.published_at.isoformat(),
-                    "source_id": a.source_id,
-                    "category_id": a.category_id,
-                }
-                for a in articles
-            ],
-            200,
-        )
-
-
-@api.route("/search")
-class SearchArticles(Resource):
-    def get(self):
-        args = flask.request.args
-        keyword = args.get("keyword", "").strip()
-        category = args.get("category", "").strip()
-        start_str = args.get("start_date")
-        end_str = args.get("end_date")
-        limit, offset = get_pagination(args)
-        start_dt = end_dt = None
-        if start_str:
-            start_dt, err = parse_iso_date(start_str, "start_date")
-            if err:
-                return format_response({"message": err}, 400, False)
-        if end_str:
-            end_dt, err = parse_iso_date(end_str, "end_date")
-            if err:
-                return format_response({"message": err}, 400, False)
-            if end_dt.time() == datetime.min.time():
-                end_dt = datetime.combine(end_dt.date(), datetime.max.time())
-        results = news_service.search_articles(
-            keyword, category, start_dt, end_dt, limit, offset
-        )
-        return format_response(
-            [
-                {
-                    "id": a.id,
-                    "title": a.title,
-                    "description": a.description,
-                    "content": a.content,
-                    "url": a.url,
-                    "published_at": a.published_at.isoformat(),
-                    "source_id": a.source_id,
-                    "category_id": a.category_id,
-                }
-                for a in results
-            ],
-            200,
-        )
-
-
-@api.route("/categories")
-class NewsCategories(Resource):
-    def get(self):
-        categories = news_service.category_repo.get_all_categories()
-        return format_response(
-            [{"id": c.id, "name": c.name} for c in categories], 200
-        )
-
-
 @api.route("/save")
 class SaveArticle(Resource):
     def post(self):
@@ -161,9 +40,7 @@ class SaveArticle(Resource):
             return format_response({"message": err}, 400)
         result = news_service.save_article(data["user_id"], data["article_id"])
         if result == "saved":
-            return format_response(
-                {"message": "Article saved successfully."}, 201
-            )
+            return format_response({"message": "Article saved successfully."}, 201)
         if result == "already_saved":
             return format_response({"message": "Article already saved."}, 409)
         return format_response({"message": "Failed to save article."}, 500)
@@ -183,13 +60,9 @@ class SaveArticle(Resource):
             return format_response({"message": err1 or err2}, 400)
         result = news_service.remove_saved_article(user_id, article_id)
         if result == "deleted":
-            return format_response(
-                {"message": "Article removed successfully."}, 200
-            )
+            return format_response({"message": "Article removed successfully."}, 200)
         if result == "not_found":
-            return format_response(
-                {"message": "Saved article not found."}, 404
-            )
+            return format_response({"message": "Saved article not found."}, 404)
         return format_response({"message": "Failed to remove article."}, 500)
 
 
@@ -201,12 +74,8 @@ class MarkArticleViewed(Resource):
         if not ok:
             return format_response({"message": err}, 400)
         try:
-            news_service.mark_article_viewed(
-                data["user_id"], data["article_id"]
-            )
-            return format_response(
-                {"message": "Article marked as viewed."}, 200
-            )
+            news_service.mark_article_viewed(data["user_id"], data["article_id"])
+            return format_response({"message": "Article marked as viewed."}, 200)
         except Exception:
             return format_response(
                 {"message": "Failed to mark article as viewed."}, 500
@@ -246,9 +115,7 @@ class SavedArticles(Resource):
 class ArticleReaction(Resource):
     def post(self):
         data = flask.request.get_json()
-        ok, err = require_fields(
-            data or {}, ["user_id", "article_id", "is_like"]
-        )
+        ok, err = require_fields(data or {}, ["user_id", "article_id", "is_like"])
         if not ok:
             return format_response({"message": err}, 400)
         result = news_service.react_to_article(
@@ -308,9 +175,7 @@ class ReactedArticles(Resource):
         if err:
             return format_response({"message": err}, 400)
         if reaction_type not in ("like", "dislike"):
-            return format_response(
-                {"message": "type must be 'like' or 'dislike'"}, 400
-            )
+            return format_response({"message": "type must be 'like' or 'dislike'"}, 400)
         limit, offset = get_pagination(args)
         articles = news_service.get_reacted_articles(
             user_id, reaction_type, limit, offset
@@ -346,9 +211,7 @@ class ArticleReactionCounts(Resource):
 class ReportArticle(Resource):
     def post(self):
         data = flask.request.get_json()
-        ok, err = require_fields(
-            data or {}, ["user_id", "article_id", "reason"]
-        )
+        ok, err = require_fields(data or {}, ["user_id", "article_id", "reason"])
         if not ok:
             return format_response(
                 None,
@@ -377,73 +240,4 @@ class ReportArticle(Resource):
                     None, message="Failed to submit report.", status_code=500
                 )
         except Exception:
-            return format_response(
-                None, message="Error occurred.", status_code=500
-            )
-
-
-@api.route("/article/<int:article_id>")
-class ArticleDetails(Resource):
-    def get(self, article_id):
-        article = news_service.article_repo.get_article_by_id(
-            article_id, include_hidden=True
-        )
-        if not article:
-            return format_response(
-                None,
-                success=False,
-                message="Article not found",
-                status_code=404,
-            )
-        return format_response(
-            {
-                "id": article.id,
-                "title": article.title,
-                "description": article.description,
-                "content": article.content,
-                "url": article.url,
-                "published_at": (
-                    article.published_at.isoformat()
-                    if article.published_at
-                    else None
-                ),
-                "source_id": article.source_id,
-                "category_id": article.category_id,
-                "is_hidden": article.is_hidden,
-                "category_name": getattr(article, "category_name", None),
-            },
-            status_code=200,
-        )
-
-
-@api.route("/personalized/<int:user_id>")
-class PersonalizedNews(Resource):
-    def get(self, user_id):
-        limit = flask.request.args.get("limit", 10, type=int)
-        offset = flask.request.args.get(
-            "offset", 0, type=int
-        )  # NEW: support offset
-        articles = news_service.get_personalized_articles(
-            user_id, limit, offset
-        )
-        return format_response(
-            [
-                {
-                    "id": a.get("id"),
-                    "title": a.get("title"),
-                    "description": a.get("description"),
-                    "content": a.get("content"),
-                    "url": a.get("url"),
-                    "published_at": (
-                        a.get("published_at").isoformat()
-                        if isinstance(a.get("published_at"), datetime)
-                        else str(a.get("published_at"))
-                    ),
-                    "source_id": a.get("source_id"),
-                    "category_id": a.get("category_id"),
-                    "category_name": a.get("category_name"),
-                }
-                for a in articles
-            ],
-            200,
-        )
+            return format_response(None, message="Error occurred.", status_code=500)

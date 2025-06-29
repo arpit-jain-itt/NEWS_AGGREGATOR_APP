@@ -13,10 +13,7 @@ from server.repository.report_repository import ReportRepository
 from server.repository.keyword_filter_repository import KeywordFilterRepository
 from server.repository.db_connector import db
 from server.utils.auth import require_role
-from server.utils.controller_helper import (
-    require_fields,
-    safe_int,
-)
+from server.utils.controller_helper import require_fields, safe_int
 
 user_service = UserService(UserRepository(db))
 api = Namespace("admin", description="Admin operations")
@@ -104,9 +101,7 @@ class NewsSourceCollection(Resource):
             {
                 **asdict(src),
                 "last_accessed": (
-                    src.last_accessed.isoformat()
-                    if src.last_accessed
-                    else None
+                    src.last_accessed.isoformat() if src.last_accessed else None
                 ),
             }
             for src in sources
