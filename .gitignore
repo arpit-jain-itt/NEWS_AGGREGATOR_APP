@@ -4,5 +4,5 @@
 *.pyc
 *pycache*
 *.pytest*
-*.log
+*.log*
 *.coverage
