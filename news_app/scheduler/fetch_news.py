@@ -14,7 +14,7 @@ from server.services.news_service import NewsService
 os.makedirs("logs", exist_ok=True)
 
 LOG_FILE = "logs/scheduler.log"
-LOG_LEVEL = logging.WARNING
+LOG_LEVEL = logging.INFO
 
 handler = TimedRotatingFileHandler(
     LOG_FILE, when="midnight", interval=1, backupCount=30, encoding="utf-8"

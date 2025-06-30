@@ -93,14 +93,12 @@ class NewsService:
     ) -> int:
         inserted = 0
 
-        for category in categories:
-            if inserted >= total_to_fetch:
-                break
-
+        # If TheNewsApiClient, fetch once and map each article to a category
+        if isinstance(client, TheNewsApiClient):
             try:
-                headlines = client.fetch_top_headlines(category)
+                headlines = client.fetch_top_headlines()
             except Exception:
-                continue
+                return inserted
 
             for article in headlines:
                 if inserted >= total_to_fetch:
@@ -121,12 +119,8 @@ class NewsService:
                     if any(bk.lower() in text for bk in blocked_keywords):
                         continue
 
-                # Category mapping
-                if isinstance(client, TheNewsApiClient):
-                    mapped_category = map_article_to_category(article)
-                    category_id = get_category_id(self.category_repo, mapped_category)
-                else:
-                    category_id = get_category_id(self.category_repo, category)
+                mapped_category = map_article_to_category(article)
+                category_id = get_category_id(self.category_repo, mapped_category)
 
                 article_id = self.article_repo.insert_article(
                     title=article.get("title"),
@@ -139,6 +133,54 @@ class NewsService:
                 )
                 if article_id:
                     inserted += 1
+
+        # For NewsApiOrgClient, fetch per category
+        else:
+            # Fetch a fixed number per category to ensure all categories are covered
+            articles_per_category = max(1, total_to_fetch // len(categories))
+            for category in categories:
+                if inserted >= total_to_fetch:
+                    break
+
+                try:
+                    headlines = client.fetch_top_headlines(category)
+                except Exception:
+                    continue
+
+                count = 0
+                for article in headlines:
+                    if inserted >= total_to_fetch or count >= articles_per_category:
+                        break
+
+                    published_at = parse_ts(
+                        article.get("publishedAt")
+                        or article.get("published_at")
+                        or article.get("date")
+                    )
+
+                    # Blocked keyword filtering
+                    if self.keyword_repo:
+                        blocked_keywords = [
+                            k.keyword for k in self.keyword_repo.get_all_keywords()
+                        ]
+                        text = f"{article.get('title', '')} {article.get('description', '')} {article.get('content', '')}".lower()
+                        if any(bk.lower() in text for bk in blocked_keywords):
+                            continue
+
+                    category_id = get_category_id(self.category_repo, category)
+
+                    article_id = self.article_repo.insert_article(
+                        title=article.get("title"),
+                        description=article.get("description"),
+                        url=article.get("url"),
+                        published_at=published_at,
+                        source_id=source.id,
+                        category_id=category_id,
+                        content=article.get("content") or article.get("snippet"),
+                    )
+                    if article_id:
+                        inserted += 1
+                        count += 1
 
         return inserted
 

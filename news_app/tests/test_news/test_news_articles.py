@@ -1,0 +1,108 @@
+import pytest
+from unittest.mock import patch
+from datetime import datetime
+from server.models.article_model import Article
+from server.models.category_model import Category
+
+
+def fake_article(id=1, title="Test Article"):
+    return Article(
+        id=id,
+        title=title,
+        description="desc",
+        content="content",
+        url="http://abc_test.com",
+        published_at=datetime.now(),
+        source_id=1,
+        category_id=1,
+        is_hidden=False,
+        category_name="general",
+    )
+
+
+def fake_category(id=1, name="general"):
+    return Category(id=id, name=name, is_hidden=False)
+
+
+def get_data(response):
+    data = response.get_json()
+    return data.get("data", None)
+
+
+def test_headlines(client):
+    fake_articles = [fake_article(1, "Headline 1"), fake_article(2, "Headline 2")]
+    with patch(
+        "server.services.news_service.NewsService.search_articles",
+        return_value=fake_articles,
+    ):
+        res = client.get("/api/news/headlines")
+        print("\ntest_headlines:", res.get_json())
+        data = get_data(res)
+        assert res.status_code == 200
+        assert isinstance(data, list)
+        assert data[0]["title"] == "Headline 1"
+
+
+def test_latest(client):
+    fake_articles = [fake_article(1, "Latest 1"), fake_article(2, "Latest 2")]
+    with patch(
+        "server.services.news_service.NewsService.get_latest_articles",
+        return_value=fake_articles,
+    ):
+        res = client.get("/api/news/latest")
+        print("\ntest_latest:", res.get_json())
+        data = get_data(res)
+        assert res.status_code == 200
+        assert data[0]["title"] == "Latest 1"
+
+
+def test_search_articles(client):
+    fake_articles = [fake_article(1, "Search Result")]
+    with patch(
+        "server.services.news_service.NewsService.search_articles",
+        return_value=fake_articles,
+    ):
+        res = client.get("/api/news/search?keyword=test")
+        print("\ntest_search_articles:", res.get_json())
+        data = get_data(res)
+        assert res.status_code == 200
+        assert data[0]["title"] == "Search Result"
+
+
+def test_categories(client):
+    fake_categories = [fake_category(1, "general"), fake_category(2, "sports")]
+    with patch(
+        "server.repository.category_repository.CategoryRepository.get_all_categories",
+        return_value=fake_categories,
+    ):
+        res = client.get("/api/news/categories")
+        print("\ntest_categories:", res.get_json())
+        data = get_data(res)
+        assert res.status_code == 200
+        assert data[0]["name"] == "general"
+
+
+def test_article_details(client):
+    article = fake_article(1, "Detail Article")
+    with patch(
+        "server.repository.article_repository.ArticleRepository.get_article_by_id",
+        return_value=article,
+    ):
+        res = client.get("/api/news/article/1")
+        print("\ntest_article_details:", res.get_json())
+        data = get_data(res)
+        assert res.status_code == 200
+        assert data["title"] == "Detail Article"
+
+
+def test_personalized_news(client):
+    fake_articles = [fake_article(1, "Personalized 1")]
+    with patch(
+        "server.services.news_service.NewsService.get_personalized_articles",
+        return_value=fake_articles,
+    ):
+        res = client.get("/api/news/personalized/1")
+        print("\ntest_personalized_news:", res.get_json())
+        data = get_data(res)
+        assert res.status_code == 200
+        assert data[0]["title"] == "Personalized 1"

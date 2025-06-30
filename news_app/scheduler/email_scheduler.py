@@ -13,8 +13,8 @@ from server.services.notification_service import NotificationService
 
 os.makedirs("logs", exist_ok=True)
 
-LOG_FILE = "logs/scheduler.log"
-LOG_LEVEL = logging.WARNING
+LOG_FILE = "logs/email_scheduler.log"
+LOG_LEVEL = logging.INFO
 
 handler = TimedRotatingFileHandler(
     LOG_FILE, when="midnight", interval=1, backupCount=30, encoding="utf-8"
@@ -51,6 +51,7 @@ def send_scheduled_notifications():
 
 
 if __name__ == "__main__":
+    logging.info("Scheduler started for email_scheduler.py")
     scheduler = BlockingScheduler()
     scheduler.add_job(
         send_scheduled_notifications,
@@ -59,7 +60,6 @@ if __name__ == "__main__":
         minutes=5,
         next_run_time=datetime.now() + timedelta(seconds=1),
     )
-    logging.info("Scheduler started for email_scheduler.py")
     try:
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):

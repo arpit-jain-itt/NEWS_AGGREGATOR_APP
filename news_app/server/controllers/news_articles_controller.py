@@ -182,24 +182,22 @@ class ArticleDetails(Resource):
 class PersonalizedNews(Resource):
     def get(self, user_id):
         limit = flask.request.args.get("limit", 10, type=int)
-        offset = flask.request.args.get("offset", 0, type=int)  # NEW: support offset
+        offset = flask.request.args.get("offset", 0, type=int)
         articles = news_service.get_personalized_articles(user_id, limit, offset)
         return format_response(
             [
                 {
-                    "id": a.get("id"),
-                    "title": a.get("title"),
-                    "description": a.get("description"),
-                    "content": a.get("content"),
-                    "url": a.get("url"),
+                    "id": a.id,
+                    "title": a.title,
+                    "description": a.description,
+                    "content": a.content,
+                    "url": a.url,
                     "published_at": (
-                        a.get("published_at").isoformat()
-                        if isinstance(a.get("published_at"), datetime)
-                        else str(a.get("published_at"))
+                        a.published_at.isoformat() if a.published_at else None
                     ),
-                    "source_id": a.get("source_id"),
-                    "category_id": a.get("category_id"),
-                    "category_name": a.get("category_name"),
+                    "source_id": a.source_id,
+                    "category_id": a.category_id,
+                    "category_name": getattr(a, "category_name", None),
                 }
                 for a in articles
             ],
