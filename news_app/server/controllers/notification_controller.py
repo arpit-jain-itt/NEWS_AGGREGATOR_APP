@@ -59,8 +59,6 @@ class NotificationPreferences(Resource):
             notification_repo.get_notification_preferences(user_id) or {}
         )
 
-        # Handle "remove all" case: if categories or keywords are empty,
-        # treat as empty list
         categories_csv = data.get("categories", None)
         keywords_csv = data.get("keywords", None)
 
@@ -85,8 +83,6 @@ class NotificationPreferences(Resource):
         )
         enabled = data.get("enabled", existing.get("enabled", True))
 
-        # If both categories and keywords are empty, and enabled is False,
-        # treat as "remove all"
         if not user_cats and not user_keys:
             notify_via_email = False
             enabled = False

@@ -17,9 +17,7 @@ class NewsArticleHandler:
     def _headers(self):
         return {"X-User-ID": str(self.current_user["id"])}
 
-    def paginate_and_display(
-        self, title, fetch_fn, on_select=None, display_fn=None
-    ):
+    def paginate_and_display(self, title, fetch_fn, on_select=None, display_fn=None):
         cli_paginate_items(
             fetch_fn=fetch_fn,
             title=title,
@@ -38,9 +36,7 @@ class NewsArticleHandler:
         self._article_action_menu(article_id)
 
     def _article_action_menu(self, article_id):
-        print(
-            "\nOptions:\n1. Save Article\n2. Like\n3. Dislike\n4. Report\n5. Go Back"
-        )
+        print("\nOptions:\n1. Save Article\n2. Like\n3. Dislike\n4. Report\n5. Go Back")
         choice = input("Choose an option: ").strip()
         if choice == "1":
             self._save_article(article_id)
@@ -92,7 +88,9 @@ class NewsArticleHandler:
             )
 
     def _remove_saved_article(self, article_id: int):
-        route = f"/api/news/save?user_id={self.current_user['id']}&article_id={article_id}"
+        route = (
+            f"/api/news/save?user_id={self.current_user['id']}&article_id={article_id}"
+        )
         resp = delete_json(route, headers=self._headers())
         if resp is None:
             logging.error(
@@ -131,9 +129,7 @@ class NewsArticleHandler:
             )
 
     def list_news(self):
-        categories = get_json(
-            "/api/categories", headers=self._headers(), default=[]
-        )
+        categories = get_json("/api/categories", headers=self._headers(), default=[])
         if not categories:
             print("No categories available.")
             logging.error(
@@ -271,9 +267,7 @@ class NewsArticleHandler:
                 default=[],
             )
 
-        self.paginate_and_display(
-            "Liked Articles", fetch, on_select=self.view_article
-        )
+        self.paginate_and_display("Liked Articles", fetch, on_select=self.view_article)
 
     def list_disliked_articles(self):
         def fetch(limit, offset):
@@ -295,10 +289,6 @@ class NewsArticleHandler:
 
     # Personalized Articles
     def list_personalized_articles(self):
-        """
-        Fetch and display personalized articles for the current user.
-        """
-
         def fetch(limit, offset):
             return get_json(
                 f"/api/news/personalized/{self.current_user['id']}",

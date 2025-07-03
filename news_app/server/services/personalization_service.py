@@ -11,11 +11,6 @@ class PersonalizationService:
     def get_personalized_articles(
         self, user_id: int, limit: int = 10, offset: int = 0
     ) -> List[Dict[str, Any]]:
-        """
-        Return top-N personalized articles for a user, ranked by computed score.
-        If the user has no history, return the most recent articles.
-        """
-
         # 1. Gather user behavior data
         user_keywords = self.user_repo.get_user_keywords(user_id) or []
         liked_article_ids = self.user_repo.get_liked_article_ids(user_id) or []

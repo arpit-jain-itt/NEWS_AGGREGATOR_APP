@@ -46,9 +46,7 @@ class UserRepository:
                 VALUES (%s, %s, %s, %s)
             """
             with with_cursor(conn) as cursor:
-                cursor.execute(
-                    query, (username, email, password_hash, is_admin)
-                )
+                cursor.execute(query, (username, email, password_hash, is_admin))
                 conn.commit()
                 user_id = cursor.lastrowid
             return user_id
@@ -81,38 +79,23 @@ class UserRepository:
         finally:
             conn.close()
 
-    # PERSONALIZATION METHODS
-
     def get_user_keywords(self, user_id: int) -> List[str]:
-        """
-        Returns a list of keywords set by the user for notifications.
-        Handles JSON object with 'keywords' key, JSON list, or comma-separated string.
-        """
         conn = self.db.connect()
         try:
-            query = (
-                "SELECT keywords FROM user_notifications WHERE user_id = %s"
-            )
+            query = "SELECT keywords FROM user_notifications WHERE user_id = %s"
             with with_cursor(conn, dictionary=True) as cursor:
                 cursor.execute(query, (user_id,))
                 row = cursor.fetchone()
             if row and row["keywords"]:
                 try:
-                    # Try to parse as JSON object with 'keywords' key
                     data = json.loads(row["keywords"])
                     if isinstance(data, dict) and "keywords" in data:
                         return [
-                            kw.strip().lower()
-                            for kw in data["keywords"]
-                            if kw.strip()
+                            kw.strip().lower() for kw in data["keywords"] if kw.strip()
                         ]
-                    # Or as a list
                     if isinstance(data, list):
-                        return [
-                            kw.strip().lower() for kw in data if kw.strip()
-                        ]
+                        return [kw.strip().lower() for kw in data if kw.strip()]
                 except Exception:
-                    # Fallback: split by comma
                     return [
                         kw.strip().lower()
                         for kw in row["keywords"].split(",")
@@ -123,9 +106,6 @@ class UserRepository:
             conn.close()
 
     def get_liked_article_ids(self, user_id: int) -> List[int]:
-        """
-        Returns a list of article IDs the user has liked.
-        """
         conn = self.db.connect()
         try:
             query = "SELECT article_id FROM likes_dislikes WHERE user_id = %s AND is_like = TRUE"
@@ -137,9 +117,6 @@ class UserRepository:
             conn.close()
 
     def get_disliked_article_ids(self, user_id: int) -> List[int]:
-        """
-        Returns a list of article IDs the user has disliked.
-        """
         conn = self.db.connect()
         try:
             query = "SELECT article_id FROM likes_dislikes WHERE user_id = %s AND is_like = FALSE"
@@ -151,9 +128,6 @@ class UserRepository:
             conn.close()
 
     def get_saved_article_ids(self, user_id: int) -> List[int]:
-        """
-        Returns a list of article IDs the user has saved.
-        """
         conn = self.db.connect()
         try:
             query = "SELECT article_id FROM saved_articles WHERE user_id = %s"
@@ -165,9 +139,6 @@ class UserRepository:
             conn.close()
 
     def get_viewed_article_ids(self, user_id: int) -> List[int]:
-        """
-        Returns a list of article IDs the user has viewed.
-        """
         conn = self.db.connect()
         try:
             query = "SELECT article_id FROM viewed_articles WHERE user_id = %s"
