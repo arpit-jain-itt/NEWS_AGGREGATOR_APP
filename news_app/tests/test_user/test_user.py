@@ -80,6 +80,13 @@ def test_register_user_duplicate(client):
         assert "exists" in res.get_json().get("message", "")
 
 
+def test_register_user_error(client):
+    with patch("server.services.user_service.UserService.register_user", side_effect=Exception()):
+        payload = {"username": "newuser", "email": "new@example.com", "password": "Password123"}
+        res = client.post("/api/users/register", json=payload)
+        assert res.status_code in (500, 400)
+
+
 def test_login_success(client, fake_users_state):
     user = fake_users_state[0]
     with patch(
@@ -101,6 +108,13 @@ def test_login_failure(client):
         print("\ntest_login_failure:", res.get_json())
         assert res.status_code == 401
         assert "Invalid" in res.get_json().get("message", "")
+
+
+def test_login_error(client):
+    with patch("server.services.user_service.UserService.authenticate_user", side_effect=Exception()):
+        payload = {"email": "user@user.com", "password": "Password123"}
+        res = client.post("/api/users/login", json=payload)
+        assert res.status_code in (500, 400)
 
 
 def test_logout(client):

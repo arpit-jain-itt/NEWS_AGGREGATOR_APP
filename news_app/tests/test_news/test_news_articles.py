@@ -106,3 +106,21 @@ def test_personalized_news(client):
         data = get_data(res)
         assert res.status_code == 200
         assert data[0]["title"] == "Personalized 1"
+
+
+def test_headlines_error(client):
+    with patch("server.services.news_service.NewsService.search_articles", side_effect=Exception()):
+        res = client.get("/api/news/headlines")
+        assert res.status_code in (500, 400)
+
+
+def test_latest_error(client):
+    with patch("server.services.news_service.NewsService.get_latest_articles", side_effect=Exception()):
+        res = client.get("/api/news/latest")
+        assert res.status_code in (500, 400)
+
+
+def test_search_articles_error(client):
+    with patch("server.services.news_service.NewsService.search_articles", side_effect=Exception()):
+        res = client.get("/api/news/search?keyword=test")
+        assert res.status_code in (500, 400)

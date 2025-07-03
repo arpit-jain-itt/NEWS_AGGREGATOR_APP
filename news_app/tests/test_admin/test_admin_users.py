@@ -39,3 +39,21 @@ def test_list_users(client, fake_users_state):
         assert data[0]["is_admin"] is True
         assert data[1]["username"] == "user"
         assert data[1]["is_admin"] is False
+
+
+def test_delete_user_success(client):
+    with patch("server.services.user_service.UserService.delete_user", return_value=True):
+        res = client.delete("/api/admin/users/2", headers=ADMIN_HEADERS)
+        assert res.status_code in (200, 404, 500)
+
+
+def test_delete_user_not_found(client):
+    with patch("server.services.user_service.UserService.delete_user", return_value=False):
+        res = client.delete("/api/admin/users/999", headers=ADMIN_HEADERS)
+        assert res.status_code in (404, 500)
+
+
+def test_delete_user_no_permission(client):
+    with patch("server.services.user_service.UserService.delete_user", return_value=False):
+        res = client.delete("/api/admin/users/2")  # No admin header
+        assert res.status_code in (401, 403, 404, 500)

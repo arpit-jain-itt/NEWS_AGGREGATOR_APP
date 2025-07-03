@@ -58,6 +58,26 @@ def test_login_invalid_credentials(handler):
         assert user is None
 
 
+def test_login_no_response(handler):
+    with patch("client.handlers.auth_handler.post_json", return_value=None), \
+         patch("builtins.input", return_value="test@example.com"), \
+         patch("getpass.getpass", return_value="Password123"):
+        user = handler.login()
+        assert user is None
+
+
+def test_login_missing_user_data(handler):
+    class FakeResp:
+        status_code = 200
+        def json(self):
+            return {}
+    with patch("client.handlers.auth_handler.post_json", return_value=FakeResp()), \
+         patch("builtins.input", return_value="test@example.com"), \
+         patch("getpass.getpass", return_value="Password123"):
+        user = handler.login()
+        assert user is None
+
+
 def test_register_success(handler):
     class FakeResp:
         status_code = 201
@@ -128,6 +148,39 @@ def test_register_passwords_do_not_match(handler):
         )
 
 
+def test_register_no_response(handler):
+    with patch("client.handlers.auth_handler.post_json", return_value=None), \
+         patch("builtins.input", side_effect=["user", "user@example.com"]), \
+         patch("getpass.getpass", side_effect=["Password123", "Password123"]), \
+         patch("client.handlers.auth_handler.validate_email", return_value=True), \
+         patch("client.handlers.auth_handler.validate_password", return_value=True):
+        handler.register()
+
+
+def test_register_value_error_on_json(handler):
+    class FakeResp:
+        status_code = 409
+        def json(self):
+            raise ValueError("No JSON")
+    with patch("client.handlers.auth_handler.post_json", return_value=FakeResp()), \
+         patch("builtins.input", side_effect=["user", "user@example.com"]), \
+         patch("getpass.getpass", side_effect=["Password123", "Password123"]), \
+         patch("client.handlers.auth_handler.validate_email", return_value=True), \
+         patch("client.handlers.auth_handler.validate_password", return_value=True):
+        handler.register()
+
+
+def test_register_unexpected_status(handler):
+    class FakeResp:
+        status_code = 500
+    with patch("client.handlers.auth_handler.post_json", return_value=FakeResp()), \
+         patch("builtins.input", side_effect=["user", "user@example.com"]), \
+         patch("getpass.getpass", side_effect=["Password123", "Password123"]), \
+         patch("client.handlers.auth_handler.validate_email", return_value=True), \
+         patch("client.handlers.auth_handler.validate_password", return_value=True):
+        handler.register()
+
+
 def test_logout_success(handler):
     handler.current_user = {"id": 1, "username": "testuser"}
 
@@ -154,6 +207,12 @@ def test_logout_error(handler):
     with patch("client.handlers.auth_handler.post_json", return_value=FakeResp()):
         handler.logout()
         print("test_logout_error: Should print 'Logout failed.'")
+
+
+def test_logout_no_response(handler):
+    handler.current_user = {"id": 1, "username": "testuser"}
+    with patch("client.handlers.auth_handler.post_json", return_value=None):
+        handler.logout()
 
 
 def test_manage_users_list_and_delete(handler):
@@ -192,3 +251,37 @@ def test_manage_users_invalid_choice(handler):
     ):
         handler.manage_users()
         print("test_manage_users_invalid_choice: Should print 'Invalid choice.'")
+
+
+def test_manage_users_not_logged_in(handler):
+    handler.current_user = None
+    handler.manage_users()
+
+
+def test_manage_users_get_json_none(handler):
+    handler.current_user = {"id": 1, "username": "admin", "is_admin": True}
+    with patch("client.handlers.auth_handler.get_json", return_value=None):
+        handler.manage_users()
+
+
+def test_manage_users_invalid_user_id(handler):
+    handler.current_user = {"id": 1, "username": "admin", "is_admin": True}
+    fake_users = [
+        {"id": 1, "username": "admin", "email": "admin@example.com", "is_admin": True},
+    ]
+    with patch("client.handlers.auth_handler.get_json", return_value=fake_users), \
+         patch("builtins.input", side_effect=["1", "abc"]):
+        handler.manage_users()
+
+
+def test_manage_users_delete_failed(handler):
+    handler.current_user = {"id": 1, "username": "admin", "is_admin": True}
+    fake_users = [
+        {"id": 1, "username": "admin", "email": "admin@example.com", "is_admin": True},
+    ]
+    class FakeDelResp:
+        status_code = 400
+    with patch("client.handlers.auth_handler.get_json", return_value=fake_users), \
+         patch("builtins.input", side_effect=["1", "1"]), \
+         patch("client.handlers.auth_handler.delete_json", return_value=FakeDelResp()):
+        handler.manage_users()

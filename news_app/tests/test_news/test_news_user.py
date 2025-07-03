@@ -143,3 +143,15 @@ def test_report_article(client):
         print("\ntest_report_article:", res.get_json())
         assert res.status_code in (200, 201, True)
         assert "submitted" in get_message(res)
+
+
+def test_save_article_error(client):
+    with patch("server.services.news_service.NewsService.save_article", side_effect=Exception()):
+        res = client.post("/api/news/save", json={"user_id": 1, "article_id": 1})
+        assert res.status_code in (500, 400)
+
+
+def test_remove_saved_article_error(client):
+    with patch("server.services.news_service.NewsService.remove_saved_article", side_effect=Exception()):
+        res = client.delete("/api/news/save?user_id=1&article_id=1")
+        assert res.status_code in (500, 400)
