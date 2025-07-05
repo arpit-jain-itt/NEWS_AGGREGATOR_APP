@@ -194,7 +194,7 @@ class NewsService:
                 return []
             cat_id = cat.id
         articles = self.article_repo.search_articles(
-            keyword="",
+            keywords=[],
             category_id=cat_id,
             start_date=None,
             end_date=None,
@@ -206,14 +206,13 @@ class NewsService:
 
     def search_articles(
         self,
-        keyword: str = "",
+        keywords: List[str],
         category: str = "",
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         limit: int = 20,
         offset: int = 0,
     ) -> List[Article]:
-        keyword = keyword.strip().lower()
         cat_id = None
         if category:
             cat = self.category_repo.get_category_by_name(category.strip())
@@ -222,7 +221,7 @@ class NewsService:
             cat_id = cat.id
 
         articles = self.article_repo.search_articles(
-            keyword=keyword,
+            keywords=keywords,
             category_id=cat_id,
             start_date=start_date,
             end_date=end_date,

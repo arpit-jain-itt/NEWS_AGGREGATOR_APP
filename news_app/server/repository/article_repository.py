@@ -157,7 +157,7 @@ class ArticleRepository:
 
     def search_articles(
         self,
-        keyword: str = "",
+        keywords: List[str] = [],
         category_id: Optional[int] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
@@ -176,10 +176,15 @@ class ArticleRepository:
         if category_id is not None:
             query += " AND a.category_id = %s"
             params.append(category_id)
-        if keyword:
-            query += " AND (LOWER(a.title) LIKE %s OR LOWER(a.description) LIKE %s OR LOWER(a.content) LIKE %s)"
-            like_keyword = f"%{keyword.lower()}%"
-            params.extend([like_keyword, like_keyword, like_keyword])
+        if keywords:
+            keyword_clauses = []
+            for kw in keywords:
+                keyword_clauses.append(
+                    "(LOWER(a.title) LIKE %s OR LOWER(a.description) LIKE %s OR LOWER(a.content) LIKE %s)"
+                )
+                like_kw = f"%{kw.lower()}%"
+                params.extend([like_kw, like_kw, like_kw])
+            query += " AND (" + " OR ".join(keyword_clauses) + ")"
         if start_date and start_date.tzinfo is None:
             start_date = start_date.replace(tzinfo=timezone.utc)
         if end_date and end_date.tzinfo is None:

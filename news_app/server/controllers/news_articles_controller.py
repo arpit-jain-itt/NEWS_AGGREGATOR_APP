@@ -37,6 +37,10 @@ class Headlines(Resource):
         args = flask.request.args
         start_str = args.get("start_date")
         end_str = args.get("end_date")
+        category = args.get("category", "").strip()
+        keyword = args.get("keyword", "").strip()  # <-- Added
+        # Split keywords by comma and strip whitespace
+        keywords = [k.strip() for k in keyword.split(",") if k.strip()]  # <-- Added
         limit, offset = get_pagination(args)
         if start_str:
             start_date, err = parse_iso_date(start_str, "start_date")
@@ -54,7 +58,9 @@ class Headlines(Resource):
             end_date = start_date
         start_dt = datetime.combine(start_date, datetime.min.time())
         end_dt = datetime.combine(end_date, datetime.max.time())
-        articles = news_service.search_articles("", "", start_dt, end_dt, limit, offset)
+        articles = news_service.search_articles(
+            keywords, category, start_dt, end_dt, limit, offset
+        )
         return format_response(
             [
                 {
@@ -118,8 +124,9 @@ class SearchArticles(Resource):
                 return format_response({"message": err}, 400, False)
             if end_dt.time() == datetime.min.time():
                 end_dt = datetime.combine(end_dt.date(), datetime.max.time())
+        keywords = [k.strip() for k in keyword.split(",") if k.strip()]
         results = news_service.search_articles(
-            keyword, category, start_dt, end_dt, limit, offset
+            keywords, category, start_dt, end_dt, limit, offset
         )
         return format_response(
             [

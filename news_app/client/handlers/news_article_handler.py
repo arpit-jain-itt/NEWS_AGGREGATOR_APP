@@ -233,6 +233,25 @@ class NewsArticleHandler:
         self.paginate_and_display("Search Results", fetch)
 
     def view_headlines(self):
+        while True:
+            print("\n--- View Headlines ---")
+            print("1. View All Headlines")
+            print("2. View Headlines by Category")
+            print("3. View Headlines by Keywords")
+            print("4. Back")
+            choice = input("Choose an option: ").strip()
+            if choice == "1":
+                self._view_all_headlines()
+            elif choice == "2":
+                self._view_headlines_by_category()
+            elif choice == "3":
+                self._view_headlines_by_keywords()
+            elif choice == "4":
+                break
+            else:
+                print("Invalid choice. Please try again.")
+
+    def _view_all_headlines(self):
         start_date = (date.today() - timedelta(days=1)).isoformat()
         end_date = date.today().isoformat()
 
@@ -248,10 +267,70 @@ class NewsArticleHandler:
                 headers=self._headers(),
                 default=[],
             )
-
             return articles
 
-        self.paginate_and_display("Top Headlines", fetch)
+        self.paginate_and_display("Top Headlines (All)", fetch)
+
+    def _view_headlines_by_category(self):
+        categories = get_json("/api/categories", headers=self._headers(), default=[])
+        if not categories:
+            print("No categories available.")
+            return
+
+        print("\n--- Categories ---")
+        for i, cat in enumerate(categories, 1):
+            print(f"{i}. {cat['name']}")
+        choice = input("Select category number: ").strip()
+        if not choice.isdigit() or not (1 <= int(choice) <= len(categories)):
+            print("Invalid category selection.")
+            return
+        category = categories[int(choice) - 1]["name"]
+
+        start_date = (date.today() - timedelta(days=1)).isoformat()
+        end_date = date.today().isoformat()
+
+        def fetch(limit, offset):
+            articles = get_json(
+                "/api/news/headlines",
+                {
+                    "limit": limit,
+                    "offset": offset,
+                    "category": category,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                },
+                headers=self._headers(),
+                default=[],
+            )
+            return articles
+
+        self.paginate_and_display(f"Top Headlines ({category})", fetch)
+
+    def _view_headlines_by_keywords(self):
+        keyword = input("Enter keyword(s) to search in headlines: ").strip()
+        if not keyword:
+            print("Keyword is required.")
+            return
+
+        start_date = (date.today() - timedelta(days=1)).isoformat()
+        end_date = date.today().isoformat()
+
+        def fetch(limit, offset):
+            articles = get_json(
+                "/api/news/headlines",
+                {
+                    "limit": limit,
+                    "offset": offset,
+                    "keyword": keyword,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                },
+                headers=self._headers(),
+                default=[],
+            )
+            return articles
+
+        self.paginate_and_display(f"Top Headlines (Keyword: {keyword})", fetch)
 
     def list_liked_articles(self):
         def fetch(limit, offset):
@@ -287,7 +366,6 @@ class NewsArticleHandler:
             "Disliked Articles", fetch, on_select=self.view_article
         )
 
-    # Personalized Articles
     def list_personalized_articles(self):
         def fetch(limit, offset):
             return get_json(
