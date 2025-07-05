@@ -12,7 +12,6 @@ from client.handlers.news_keyword_handler import NewsKeywordHandler
 from client.handlers.notification_handler import NotificationHandler
 from client.handlers.search_handler import SearchHandler
 
-
 os.makedirs("logs", exist_ok=True)
 
 LOG_FILE = "logs/client.log"
@@ -58,7 +57,8 @@ def user_menu():
     print("7. View Disliked Articles")
     print("8. Notifications Settings")
     print("9. My Reported Articles")
-    print("10. Logout")
+    print("10. View Notification History")
+    print("11. Logout")
     return input("Choose an option: ").strip()
 
 
@@ -85,9 +85,9 @@ def run():
         sys.exit(1)
 
     auth = AuthHandler()
-    news_article = news_source = news_category = news_reporting = (
-        news_keyword
-    ) = notifications = search = None
+    news_article = news_source = news_category = news_reporting = news_keyword = (
+        notifications
+    ) = search = None
 
     try:
         while True:
@@ -134,9 +134,9 @@ def run():
                         news_keyword.manage_keywords()
                     elif choice == "9":
                         auth.logout()
-                        news_article = news_source = news_category = (
-                            news_reporting
-                        ) = news_keyword = notifications = search = None
+                        news_article = news_source = news_category = news_reporting = (
+                            news_keyword
+                        ) = notifications = search = None
                     else:
                         print("Invalid choice. Please try again.")
                 # User Menu
@@ -168,10 +168,12 @@ def run():
                     elif choice == "9":
                         news_reporting.list_my_reported_articles()
                     elif choice == "10":
+                        notifications.view_sent_notifications()
+                    elif choice == "11":
                         auth.logout()
-                        news_article = news_source = news_category = (
-                            news_reporting
-                        ) = news_keyword = notifications = search = None
+                        news_article = news_source = news_category = news_reporting = (
+                            news_keyword
+                        ) = notifications = search = None
                     else:
                         print("Invalid choice. Please try again.")
     except KeyboardInterrupt:

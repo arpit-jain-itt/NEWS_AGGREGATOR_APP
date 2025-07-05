@@ -25,17 +25,13 @@ class NotificationHandler:
 
         # Ask user what they want to do
         update_choice = (
-            input(
-                "Do you want to update your notification preferences? (y/n): "
-            )
+            input("Do you want to update your notification preferences? (y/n): ")
             .strip()
             .lower()
         )
         if update_choice == "n":
             remove_choice = (
-                input(
-                    "Do you want to remove all notification preferences? (y/n): "
-                )
+                input("Do you want to remove all notification preferences? (y/n): ")
                 .strip()
                 .lower()
             )
@@ -47,9 +43,7 @@ class NotificationHandler:
                     "notify_via_email": False,
                     "enabled": False,
                 }
-                resp = post_json(
-                    "/api/notifications/preferences", payload=payload
-                )
+                resp = post_json("/api/notifications/preferences", payload=payload)
                 if resp and resp.ok:
                     print("Notification preferences removed successfully.")
                 else:
@@ -76,9 +70,7 @@ class NotificationHandler:
             )
 
         # Category input & validation
-        cats_input_raw = (
-            input("Enter categories (comma separated): ").strip().lower()
-        )
+        cats_input_raw = input("Enter categories (comma separated): ").strip().lower()
         if cats_input_raw:
             is_valid, cleaned, invalid = validate_categories(
                 cats_input_raw, valid_names
@@ -121,6 +113,25 @@ class NotificationHandler:
                 "Failed to update notification preferences for user %s",
                 self.current_user["id"],
             )
+
+    def view_sent_notifications(self):
+        print("\n--- Notification History ---")
+        notifications = get_json(
+            "/api/news/notifications/sent",  # <-- Fixed URL here!
+            params={"user_id": self.current_user["id"]},
+            default=[],
+        )
+        if not notifications:
+            print("No notifications have been sent to you yet.")
+            return
+
+        for idx, n in enumerate(notifications, 1):
+            print(f"\n{idx}. {n.get('title', '(No Title)')}")
+            print(f"   URL: {n.get('url', '-')}")
+            print(f"   Description: {n.get('description', '-')}")
+            print(f"   Published: {n.get('published_at', '-')}")
+            print(f"   Notified (sent): {n.get('viewed_at', '-')}")
+        print(f"\nTotal notifications sent: {len(notifications)}")
 
     def _fetch_user_notification(self):
         data = get_json(

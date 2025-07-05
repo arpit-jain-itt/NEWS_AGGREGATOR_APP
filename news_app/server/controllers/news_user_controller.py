@@ -9,6 +9,9 @@ from server.repository.likes_dislikes_repository import LikesDislikesRepository
 from server.repository.report_repository import ReportRepository
 from server.repository.keyword_filter_repository import KeywordFilterRepository
 from server.repository.user_repository import UserRepository
+from server.repository.notification_repository import NotificationRepository
+from server.services.email_service import EmailService
+from server.services.notification_service import NotificationService
 from server.utils.response_formatter import format_response
 from server.repository.db_connector import db
 from server.utils.controller_helper import (
@@ -28,6 +31,14 @@ news_service = NewsService(
     keyword_repo=KeywordFilterRepository(db),
     report_repo=ReportRepository(db),
     user_repo=UserRepository(db),
+)
+
+notification_service = NotificationService(
+    NotificationRepository(db),
+    UserRepository(db),
+    ArticleRepository(db),
+    ViewedArticleRepository(db),
+    EmailService(),
 )
 
 
@@ -241,3 +252,24 @@ class ReportArticle(Resource):
                 )
         except Exception:
             return format_response(None, message="Error occurred.", status_code=500)
+
+
+@api.route("/notifications/sent")
+class SentNotifications(Resource):
+    def get(self):
+        user_id = flask.request.args.get("user_id")
+        ok, err = require_fields({"user_id": user_id}, ["user_id"])
+        if not ok:
+            return format_response({"message": err}, 400)
+        user_id, err = safe_int(user_id, "user_id")
+        if err:
+            return format_response({"message": err}, 400)
+        sent_notifications = notification_service.get_sent_notifications_for_user(
+            user_id
+        )
+        for n in sent_notifications:
+            if n.get("published_at") and hasattr(n["published_at"], "isoformat"):
+                n["published_at"] = n["published_at"].isoformat()
+            if n.get("viewed_at") and hasattr(n["viewed_at"], "isoformat"):
+                n["viewed_at"] = n["viewed_at"].isoformat()
+        return format_response(sent_notifications, 200)

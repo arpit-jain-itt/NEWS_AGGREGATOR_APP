@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from server.repository.notification_repository import NotificationRepository
 from server.repository.user_repository import UserRepository
 from server.repository.article_repository import ArticleRepository
@@ -31,7 +31,7 @@ class NotificationService:
         self.viewed_repo = viewed_repo
         self.email_service = email_service
 
-    def send_notifications(self):
+    def send_notifications(self) -> None:
         notifications: List[UserNotification] = (
             self.notification_repo.get_all_enabled_notifications()
         )
@@ -65,16 +65,12 @@ class NotificationService:
 
             # Exclude already viewed
             matched_articles = [
-                art
-                for art in recent_articles
-                if art.id not in viewed_article_ids
+                art for art in recent_articles if art.id not in viewed_article_ids
             ]
 
             # Send email
             if matched_articles and notif.notify_via_email:
-                email_body = compose_email_body(
-                    user.username, matched_articles
-                )
+                email_body = compose_email_body(user.username, matched_articles)
                 self.email_service.send_email(
                     user.email, "Your News Alerts", email_body
                 )
@@ -85,9 +81,7 @@ class NotificationService:
                     user.id, get_current_utc_time()
                 )
 
-    def get_user_notification(
-        self, user_id: int
-    ) -> Optional[UserNotification]:
+    def get_user_notification(self, user_id: int) -> Optional[UserNotification]:
         return self.notification_repo.get_notification_by_user_id(user_id)
 
     def update_user_notification(
@@ -129,3 +123,6 @@ class NotificationService:
             )
 
         return handle_db_exception(do_create)
+
+    def get_sent_notifications_for_user(self, user_id: int) -> List[Dict[str, Any]]:
+        return self.viewed_repo.get_viewed_articles_with_details_by_user(user_id)
