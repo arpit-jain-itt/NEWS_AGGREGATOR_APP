@@ -29,10 +29,45 @@ def test_get_category_by_name(repo):
             result = repo.get_category_by_name('general')
             assert result is not None
 
-# Example test for a method that fetches categories
-# def test_get_all_categories():
-#     with patch('server.repository.db_connector.get_db', return_value=MagicMock()):
-#         result = category_repository.get_all_categories()
-#         assert isinstance(result, list)
+def test_add_category_duplicate(repo):
+    with patch('server.utils.repository_helper.with_cursor') as mock_cursor, \
+         patch('server.utils.repository_helper.safe_execute', side_effect=lambda f, default=None: f()):
+        cursor = MagicMock()
+        mock_cursor.return_value = cursor
+        cursor.__enter__.return_value = cursor
+        cursor.fetchone.side_effect = [True]
+        result = repo.add_category('dup')
+        assert result is False
 
-# Add more tests for other methods, mocking DB as needed. 
+def test_get_or_create_category_exists(repo):
+    repo.get_category_by_name = MagicMock(return_value=MagicMock())
+    result = repo.get_or_create_category('exists')
+    assert result is not None
+
+def test_get_or_create_category_new(repo):
+    repo.get_category_by_name = MagicMock(return_value=None)
+    repo.add_category = MagicMock(return_value=True)
+    repo.get_category_by_name = MagicMock(return_value=MagicMock())
+    result = repo.get_or_create_category('new')
+    assert result is not None
+
+def test_get_general_category(repo):
+    repo.get_or_create_category = MagicMock(return_value=MagicMock())
+    result = repo.get_general_category()
+    assert result is not None
+
+def test_get_general_category_fail(repo):
+    repo.get_or_create_category = MagicMock(return_value=None)
+    with pytest.raises(RuntimeError):
+        repo.get_general_category()
+
+def test_set_category_hidden_fail(repo):
+    with patch('server.utils.repository_helper.with_cursor') as mock_cursor, \
+         patch('server.utils.repository_helper.safe_execute', side_effect=lambda f, default=None: f()):
+        cursor = MagicMock()
+        mock_cursor.return_value = cursor
+        cursor.__enter__.return_value = cursor
+        cursor.rowcount = 0
+        cursor.commit = MagicMock()
+        result = repo.set_category_hidden(1, True)
+        assert result is False

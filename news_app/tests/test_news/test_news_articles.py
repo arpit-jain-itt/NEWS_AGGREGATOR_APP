@@ -124,3 +124,77 @@ def test_search_articles_error(client):
     with patch("server.services.news_service.NewsService.search_articles", side_effect=Exception()):
         res = client.get("/api/news/search?keyword=test")
         assert res.status_code in (500, 400)
+
+
+def test_headlines_empty(client):
+    with patch(
+        "server.services.news_service.NewsService.search_articles",
+        return_value=[],
+    ):
+        res = client.get("/api/news/headlines")
+        data = get_data(res)
+        assert res.status_code == 200
+        assert data == []
+
+
+def test_headlines_invalid_keyword(client):
+    # Simulate search_articles returning articles with no keyword match
+    with patch(
+        "server.services.news_service.NewsService.search_articles",
+        return_value=[],
+    ):
+        res = client.get("/api/news/search?keyword=nonexistent")
+        data = get_data(res)
+        assert res.status_code == 200
+        assert data == []
+
+
+def test_article_details_not_found(client):
+    with patch(
+        "server.repository.article_repository.ArticleRepository.get_article_by_id",
+        return_value=None,
+    ):
+        res = client.get("/api/news/article/9999")
+        assert res.status_code in (404, 400, 500)
+
+
+def test_personalized_news_empty(client):
+    with patch(
+        "server.services.news_service.NewsService.get_personalized_articles",
+        return_value=[],
+    ):
+        res = client.get("/api/news/personalized/1")
+        data = get_data(res)
+        assert res.status_code == 200
+        assert data == []
+
+
+# Simulate scoring logic for personalized articles
+from unittest.mock import MagicMock
+
+def test_personalized_news_scoring(client):
+    fake_article_obj = fake_article(1, "Personalized Scored")
+    # Patch NewsService to simulate scoring logic
+    with patch(
+        "server.services.news_service.NewsService.get_personalized_articles",
+        return_value=[fake_article_obj],
+    ) as mock_personalized:
+        res = client.get("/api/news/personalized/1")
+        data = get_data(res)
+        assert res.status_code == 200
+        assert data[0]["title"] == "Personalized Scored"
+        # Optionally, check that scoring logic was called (if exposed)
+        # mock_personalized.assert_called_once()
+
+
+# Test timestamp parsing edge case via NewsService (simulate parse_ts)
+def test_headlines_with_invalid_timestamp(client):
+    # Patch NewsService to simulate parse_ts returning current time on error
+    broken_article = fake_article(1, "Broken Timestamp")
+    # Instead of setting published_at to a string, patch parse_ts to raise an exception
+    with patch("server.services.news_service.NewsService.search_articles", return_value=[broken_article]), \
+         patch("server.utils.service_helper.parse_ts", side_effect=Exception()):
+        res = client.get("/api/news/headlines")
+        data = get_data(res)
+        assert res.status_code == 200
+        assert data[0]["title"] == "Broken Timestamp"

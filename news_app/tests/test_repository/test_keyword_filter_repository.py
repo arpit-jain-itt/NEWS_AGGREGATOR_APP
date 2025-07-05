@@ -21,11 +21,3 @@ def test_get_all_keywords(repo):
 def test_add_keyword(repo):
     with patch('server.utils.repository_helper.safe_execute', return_value=True):
         assert repo.add_keyword('test') is True
-
-# Example test for a method that fetches keyword filters
-# def test_get_keyword_filters():
-#     with patch('server.repository.db_connector.get_db', return_value=MagicMock()):
-#         result = keyword_filter_repository.get_keyword_filters()
-#         assert isinstance(result, list)
-
-# Add more tests for other methods, mocking DB as needed. 

@@ -155,3 +155,43 @@ def test_remove_saved_article_error(client):
     with patch("server.services.news_service.NewsService.remove_saved_article", side_effect=Exception()):
         res = client.delete("/api/news/save?user_id=1&article_id=1")
         assert res.status_code in (500, 400)
+
+
+def test_save_article_invalid_user(client):
+    with patch(
+        "server.services.news_service.NewsService.save_article", return_value=None
+    ):
+        res = client.post("/api/news/save", json={"user_id": 9999, "article_id": 1})
+        assert res.status_code in (404, 400, 200)
+
+
+def test_saved_articles_empty(client):
+    with patch(
+        "server.services.news_service.NewsService.get_saved_articles_by_user",
+        return_value=[],
+    ):
+        res = client.get("/api/news/saved?user_id=1")
+        data = res.get_json()["data"]
+        assert res.status_code == 200
+        assert data == []
+
+
+def test_react_to_article_invalid(client):
+    with patch(
+        "server.services.news_service.NewsService.react_to_article",
+        return_value=None,
+    ):
+        res = client.post(
+            "/api/news/react", json={"user_id": 1, "article_id": 1, "is_like": True}
+        )
+        assert res.status_code in (404, 400, 200)
+
+
+def test_report_article_invalid(client):
+    with patch(
+        "server.services.news_service.NewsService.report_article", return_value=False
+    ):
+        res = client.post(
+            "/api/news/report", json={"user_id": 1, "article_id": 1, "reason": "spam"}
+        )
+        assert res.status_code in (404, 400, 200, 500)

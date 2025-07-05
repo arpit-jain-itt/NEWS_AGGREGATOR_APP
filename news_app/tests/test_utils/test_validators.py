@@ -1,14 +1,6 @@
 import pytest
 from client.utils import validators
 
-# Add tests for each function in validators.py
-# Example for a function named 'validate_email':
-# def test_validate_email():
-#     assert validators.validate_email('test@example.com') is True
-#     assert validators.validate_email('bad-email') is False
-
-# Add more tests below as you implement them. 
-
 def test_validate_email():
     assert validators.validate_email('test@example.com') is True
     assert validators.validate_email('bad-email') is False
