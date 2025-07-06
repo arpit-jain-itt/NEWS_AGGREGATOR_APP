@@ -117,7 +117,7 @@ class NotificationHandler:
     def view_sent_notifications(self):
         print("\n--- Notification History ---")
         notifications = get_json(
-            "/api/news/notifications/sent",  # <-- Fixed URL here!
+            "/api/news/notifications/sent",
             params={"user_id": self.current_user["id"]},
             default=[],
         )

@@ -10,7 +10,6 @@ ADMIN_HEADERS = {"X-User-ID": "1"}
 
 @pytest.fixture
 def fake_articles_state():
-    # Start with one article
     return [
         Article(
             id=10,
@@ -88,7 +87,7 @@ def test_reported_articles(client):
 
 
 def test_blocked_articles(client, fake_articles_state):
-    # Simulate that article 10 is blocked
+    # article 10 is blocked
     fake_articles_state[0].is_hidden = True
     with patch(
         "server.services.admin_service.AdminService.get_blocked_articles",
@@ -142,7 +141,7 @@ def test_hide_article_not_found(client):
 
 
 def test_unhide_article(client, fake_articles_state):
-    # Simulate that article 10 is hidden
+    # article 10 is hidden
     fake_articles_state[0].is_hidden = True
 
     def unhide_article(article_id):

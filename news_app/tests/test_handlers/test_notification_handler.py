@@ -160,8 +160,9 @@ def test_manage_notifications_no_categories(handler):
         "notify_via_email": True,
         "enabled": True,
     }
-    with patch("client.handlers.notification_handler.get_json", side_effect=[fake_prefs, []]), \
-         patch("builtins.input", side_effect=["y", "", "", "", "", ""]):
+    with patch(
+        "client.handlers.notification_handler.get_json", side_effect=[fake_prefs, []]
+    ), patch("builtins.input", side_effect=["y", "", "", "", "", ""]):
         handler.manage_notifications()
 
 
@@ -173,9 +174,14 @@ def test_manage_notifications_post_json_none(handler):
         "enabled": True,
     }
     fake_categories = [{"name": "general"}]
-    with patch("client.handlers.notification_handler.get_json", side_effect=[fake_prefs, fake_categories]), \
-         patch("client.handlers.notification_handler.post_json", return_value=None), \
-         patch("builtins.input", side_effect=["y", "general", "tesla", "y", "y", ""]):
+    with patch(
+        "client.handlers.notification_handler.get_json",
+        side_effect=[fake_prefs, fake_categories],
+    ), patch(
+        "client.handlers.notification_handler.post_json", return_value=None
+    ), patch(
+        "builtins.input", side_effect=["y", "general", "tesla", "y", "y", ""]
+    ):
         handler.manage_notifications()
 
 
@@ -187,8 +193,10 @@ def test_manage_notifications_all_empty_inputs(handler):
         "enabled": True,
     }
     fake_categories = [{"name": "general"}]
-    with patch("client.handlers.notification_handler.get_json", side_effect=[fake_prefs, fake_categories]), \
-         patch("builtins.input", side_effect=["y", "", "", "", "", ""]):
+    with patch(
+        "client.handlers.notification_handler.get_json",
+        side_effect=[fake_prefs, fake_categories],
+    ), patch("builtins.input", side_effect=["y", "", "", "", "", ""]):
         handler.manage_notifications()
 
 
@@ -200,9 +208,16 @@ def test_manage_notifications_post_json_error(handler):
         "enabled": True,
     }
     fake_categories = [{"name": "general"}]
+
     class FakeResp:
         ok = False
-    with patch("client.handlers.notification_handler.get_json", side_effect=[fake_prefs, fake_categories]), \
-         patch("client.handlers.notification_handler.post_json", return_value=FakeResp()), \
-         patch("builtins.input", side_effect=["y", "general", "tesla", "y", "y", ""]):
+
+    with patch(
+        "client.handlers.notification_handler.get_json",
+        side_effect=[fake_prefs, fake_categories],
+    ), patch(
+        "client.handlers.notification_handler.post_json", return_value=FakeResp()
+    ), patch(
+        "builtins.input", side_effect=["y", "general", "tesla", "y", "y", ""]
+    ):
         handler.manage_notifications()

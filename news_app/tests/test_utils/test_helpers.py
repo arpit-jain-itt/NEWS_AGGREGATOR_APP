@@ -64,8 +64,10 @@ def test_menu_loop_back():
 
 def test_menu_loop_valid_option():
     called = {}
+
     def fn():
         called["ok"] = True
+
     options = {"1": ("Test", fn)}
     with patch("builtins.input", side_effect=["1", "b"]):
         helpers.menu_loop(options)
@@ -74,7 +76,9 @@ def test_menu_loop_valid_option():
 
 def test_menu_loop_invalid_option():
     options = {"1": ("Test", lambda: None)}
-    with patch("builtins.input", side_effect=["x", "b"]), patch("builtins.print") as mock_print:
+    with patch("builtins.input", side_effect=["x", "b"]), patch(
+        "builtins.print"
+    ) as mock_print:
         helpers.menu_loop(options)
         mock_print.assert_any_call("Invalid choice.")
 
@@ -138,7 +142,14 @@ def test_print_article_row():
 
 
 def test_print_article_details():
-    article = {"title": "T", "published_at": "2024-01-01", "description": "desc", "content": "c", "url": "u", "category_name": "cat"}
+    article = {
+        "title": "T",
+        "published_at": "2024-01-01",
+        "description": "desc",
+        "content": "c",
+        "url": "u",
+        "category_name": "cat",
+    }
     with patch("builtins.print") as mock_print:
         helpers.print_article_details(article)
         mock_print.assert_any_call("Title: T")
@@ -146,4 +157,4 @@ def test_print_article_details():
         mock_print.assert_any_call("Description: desc")
         mock_print.assert_any_call("Content: c")
         mock_print.assert_any_call("URL: u")
-        mock_print.assert_any_call("Category: cat") 
+        mock_print.assert_any_call("Category: cat")

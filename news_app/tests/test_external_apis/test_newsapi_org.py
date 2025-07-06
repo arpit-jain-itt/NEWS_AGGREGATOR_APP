@@ -13,7 +13,7 @@ def test_fetch_top_headlines_success():
         articles = client.fetch_top_headlines("business")
         print("Articles returned:", articles)
         assert articles == fake_response["articles"]
-        print("PASS: Articles list returned as expected.")
+        print("Articles list returned as expected.")
 
 
 def test_fetch_top_headlines_error():
@@ -24,4 +24,4 @@ def test_fetch_top_headlines_error():
         mock_get.return_value.raise_for_status.side_effect = Exception("API error")
         with pytest.raises(Exception):
             client.fetch_top_headlines("business")
-        print("PASS: Exception was raised for non-200 response.")
+        print("Exception was raised for non-200 response.")

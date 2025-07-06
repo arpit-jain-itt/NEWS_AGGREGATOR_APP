@@ -18,7 +18,7 @@ class SourceRepository:
         conn = self.db.connect()
         if conn is None or not conn.is_connected():
             raise RuntimeError(
-                "[SourceRepository] DB connection is not available"
+                "DB connection is not available"
             )
         return conn
 
@@ -61,7 +61,7 @@ class SourceRepository:
             try:
                 conn = self._get_connection()
             except RuntimeError as e:
-                print(f"[SourceRepository] {e}")
+                print(f"{e}")
                 return False
             try:
                 with with_cursor(conn) as cursor:
@@ -109,7 +109,7 @@ class SourceRepository:
             try:
                 conn = self._get_connection()
             except RuntimeError as e:
-                print(f"[SourceRepository] {e}")
+                print(f"{e}")
                 return False
             try:
                 with with_cursor(conn) as cursor:

@@ -15,7 +15,7 @@ def test_fetch_top_headlines_success():
         articles = client.fetch_top_headlines("business")
         print("Articles returned:", articles)
         assert articles == fake_response["data"]
-        print("PASS: Data list returned as expected.")
+        print("Data list returned as expected.")
 
 
 def test_fetch_top_headlines_error():
@@ -26,7 +26,7 @@ def test_fetch_top_headlines_error():
         mock_get.return_value.raise_for_status.side_effect = Exception("API error")
         with pytest.raises(Exception):
             client.fetch_top_headlines("business")
-        print("PASS: Exception was raised for non-200 response.")
+        print("Exception was raised for non-200 response.")
 
 
 def test_get_news_api_client_newsapi():
@@ -34,7 +34,7 @@ def test_get_news_api_client_newsapi():
     client = get_news_api_client("News API")
     print("Client returned:", type(client).__name__)
     assert isinstance(client, NewsApiOrgClient)
-    print("PASS: NewsApiOrgClient returned for 'News API'.")
+    print("NewsApiOrgClient returned for 'News API'.")
 
 
 def test_get_news_api_client_thenewsapi():
@@ -42,7 +42,7 @@ def test_get_news_api_client_thenewsapi():
     client = get_news_api_client("The News API")
     print("Client returned:", type(client).__name__)
     assert isinstance(client, TheNewsApiClient)
-    print("PASS: TheNewsApiClient returned for 'The News API'.")
+    print("TheNewsApiClient returned for 'The News API'.")
 
 
 def test_get_news_api_client_invalid():
@@ -51,4 +51,4 @@ def test_get_news_api_client_invalid():
     )
     with pytest.raises(ValueError):
         get_news_api_client("Unknown API")
-    print("PASS: ValueError raised for unknown source.")
+    print("ValueError raised for unknown source.")

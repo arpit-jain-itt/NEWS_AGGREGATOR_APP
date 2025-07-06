@@ -81,8 +81,15 @@ def test_register_user_duplicate(client):
 
 
 def test_register_user_error(client):
-    with patch("server.services.user_service.UserService.register_user", side_effect=Exception()):
-        payload = {"username": "newuser", "email": "new@example.com", "password": "Password123"}
+    with patch(
+        "server.services.user_service.UserService.register_user",
+        side_effect=Exception(),
+    ):
+        payload = {
+            "username": "newuser",
+            "email": "new@example.com",
+            "password": "Password123",
+        }
         res = client.post("/api/users/register", json=payload)
         assert res.status_code in (500, 400)
 
@@ -111,7 +118,10 @@ def test_login_failure(client):
 
 
 def test_login_error(client):
-    with patch("server.services.user_service.UserService.authenticate_user", side_effect=Exception()):
+    with patch(
+        "server.services.user_service.UserService.authenticate_user",
+        side_effect=Exception(),
+    ):
         payload = {"email": "user@user.com", "password": "Password123"}
         res = client.post("/api/users/login", json=payload)
         assert res.status_code in (500, 400)

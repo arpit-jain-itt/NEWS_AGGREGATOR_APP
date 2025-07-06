@@ -15,7 +15,7 @@ def test_view_headlines(handler):
     ]
     with patch(
         "client.handlers.news_article_handler.get_json", return_value=fake_articles
-    ), patch("builtins.input", side_effect=["b"]):
+    ), patch("builtins.input", side_effect=["4"]):
         handler.view_headlines()
         print("test_view_headlines: articles =", fake_articles)
 
@@ -130,7 +130,7 @@ def test_list_news(handler):
     with patch(
         "client.handlers.news_article_handler.get_json",
         side_effect=[fake_categories, fake_articles],
-    ), patch("builtins.input", side_effect=["1"] + ["b"] * 10):
+    ), patch("builtins.input", side_effect=["1", "b"]):
         handler.list_news()
         print(
             "test_list_news: categories =", fake_categories, "articles =", fake_articles
@@ -139,7 +139,7 @@ def test_list_news(handler):
 
 def test_search_articles(handler):
     fake_articles = [{"id": 1, "title": "Search Result"}]
-    with patch("builtins.input", side_effect=["test", ""] + ["b"] * 10), patch(
+    with patch("builtins.input", side_effect=["test", "", "b"]), patch(
         "client.handlers.news_article_handler.get_json", return_value=fake_articles
     ):
         handler.search_articles()
@@ -147,36 +147,41 @@ def test_search_articles(handler):
 
 
 def test_view_article_missing_id(handler):
-    with patch("client.handlers.news_article_handler.print_article_details"), \
-         patch("builtins.input") as mock_input:
+    with patch("client.handlers.news_article_handler.print_article_details"), patch(
+        "builtins.input"
+    ) as mock_input:
         handler.view_article({})
         mock_input.assert_not_called()
 
 
 def test_article_action_menu_save(handler):
-    with patch("builtins.input", return_value="1"), \
-         patch.object(handler, "_save_article") as mock_save:
+    with patch("builtins.input", return_value="1"), patch.object(
+        handler, "_save_article"
+    ) as mock_save:
         handler._article_action_menu(1)
         mock_save.assert_called_once_with(1)
 
 
 def test_article_action_menu_like(handler):
-    with patch("builtins.input", return_value="2"), \
-         patch.object(handler, "_react_to_article") as mock_react:
+    with patch("builtins.input", return_value="2"), patch.object(
+        handler, "_react_to_article"
+    ) as mock_react:
         handler._article_action_menu(1)
         mock_react.assert_called_once_with(1, True)
 
 
 def test_article_action_menu_dislike(handler):
-    with patch("builtins.input", return_value="3"), \
-         patch.object(handler, "_react_to_article") as mock_react:
+    with patch("builtins.input", return_value="3"), patch.object(
+        handler, "_react_to_article"
+    ) as mock_react:
         handler._article_action_menu(1)
         mock_react.assert_called_once_with(1, False)
 
 
 def test_article_action_menu_report(handler):
-    with patch("builtins.input", return_value="4"), \
-         patch.object(handler, "report_article") as mock_report:
+    with patch("builtins.input", return_value="4"), patch.object(
+        handler, "report_article"
+    ) as mock_report:
         handler._article_action_menu(1)
         mock_report.assert_called_once_with(1)
 
@@ -194,7 +199,10 @@ def test_react_to_article_none_response(handler):
 def test_react_to_article_error_status(handler):
     class FakeResp:
         status_code = 500
-    with patch("client.handlers.news_article_handler.post_json", return_value=FakeResp()):
+
+    with patch(
+        "client.handlers.news_article_handler.post_json", return_value=FakeResp()
+    ):
         handler._react_to_article(1, True)
 
 
@@ -206,7 +214,10 @@ def test_save_article_none_response(handler):
 def test_save_article_error_status(handler):
     class FakeResp:
         status_code = 500
-    with patch("client.handlers.news_article_handler.post_json", return_value=FakeResp()):
+
+    with patch(
+        "client.handlers.news_article_handler.post_json", return_value=FakeResp()
+    ):
         handler._save_article(1)
 
 
@@ -218,21 +229,27 @@ def test_remove_saved_article_none_response(handler):
 def test_remove_saved_article_error_status(handler):
     class FakeResp:
         status_code = 500
-    with patch("client.handlers.news_article_handler.delete_json", return_value=FakeResp()):
+
+    with patch(
+        "client.handlers.news_article_handler.delete_json", return_value=FakeResp()
+    ):
         handler._remove_saved_article(1)
 
 
 def test_report_article_none_response(handler):
-    with patch("builtins.input", return_value="spam"), \
-         patch("client.handlers.news_article_handler.post_json", return_value=None):
+    with patch("builtins.input", return_value="spam"), patch(
+        "client.handlers.news_article_handler.post_json", return_value=None
+    ):
         handler.report_article(1)
 
 
 def test_report_article_error_status(handler):
     class FakeResp:
         status_code = 404
-    with patch("builtins.input", return_value="spam"), \
-         patch("client.handlers.news_article_handler.post_json", return_value=FakeResp()):
+
+    with patch("builtins.input", return_value="spam"), patch(
+        "client.handlers.news_article_handler.post_json", return_value=FakeResp()
+    ):
         handler.report_article(1)
 
 
@@ -243,42 +260,48 @@ def test_list_news_no_categories(handler):
 
 def test_list_news_invalid_input(handler):
     fake_categories = [{"name": "business"}]
-    with patch("client.handlers.news_article_handler.get_json", return_value=fake_categories), \
-         patch("builtins.input", return_value="not_a_number"):
+    with patch(
+        "client.handlers.news_article_handler.get_json", return_value=fake_categories
+    ), patch("builtins.input", return_value="not_a_number"):
         handler.list_news()
 
 
 def test_list_news_invalid_selection(handler):
     fake_categories = [{"name": "business"}]
-    with patch("client.handlers.news_article_handler.get_json", return_value=fake_categories), \
-         patch("builtins.input", return_value="5"):
+    with patch(
+        "client.handlers.news_article_handler.get_json", return_value=fake_categories
+    ), patch("builtins.input", return_value="5"):
         handler.list_news()
 
 
 def test_view_saved_article_missing_id(handler):
-    with patch("client.handlers.news_article_handler.print_article_details"), \
-         patch("builtins.input") as mock_input:
+    with patch("client.handlers.news_article_handler.print_article_details"), patch(
+        "builtins.input"
+    ) as mock_input:
         handler.view_saved_article({})
         mock_input.assert_not_called()
 
 
 def test_saved_article_action_menu_remove(handler):
-    with patch("builtins.input", return_value="1"), \
-         patch.object(handler, "_remove_saved_article") as mock_remove:
+    with patch("builtins.input", return_value="1"), patch.object(
+        handler, "_remove_saved_article"
+    ) as mock_remove:
         handler._saved_article_action_menu(1)
         mock_remove.assert_called_once_with(1)
 
 
 def test_saved_article_action_menu_like(handler):
-    with patch("builtins.input", return_value="2"), \
-         patch.object(handler, "_react_to_article") as mock_react:
+    with patch("builtins.input", return_value="2"), patch.object(
+        handler, "_react_to_article"
+    ) as mock_react:
         handler._saved_article_action_menu(1)
         mock_react.assert_called_once_with(1, True)
 
 
 def test_saved_article_action_menu_dislike(handler):
-    with patch("builtins.input", return_value="3"), \
-         patch.object(handler, "_react_to_article") as mock_react:
+    with patch("builtins.input", return_value="3"), patch.object(
+        handler, "_react_to_article"
+    ) as mock_react:
         handler._saved_article_action_menu(1)
         mock_react.assert_called_once_with(1, False)
 

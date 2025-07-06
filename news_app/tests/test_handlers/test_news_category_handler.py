@@ -151,43 +151,49 @@ def test_unhide_category_error(handler):
 
 
 def test_manage_categories_list_option(handler):
-    with patch("builtins.input", side_effect=["1", "5"]), \
-         patch.object(handler, "list_categories") as mock_list:
+    with patch("builtins.input", side_effect=["1", "5"]), patch.object(
+        handler, "list_categories"
+    ) as mock_list:
         handler.manage_categories()
         mock_list.assert_called_once()
 
 
 def test_manage_categories_add_option(handler):
-    with patch("builtins.input", side_effect=["2", "5"]), \
-         patch.object(handler, "add_category") as mock_add:
+    with patch("builtins.input", side_effect=["2", "5"]), patch.object(
+        handler, "add_category"
+    ) as mock_add:
         handler.manage_categories()
         mock_add.assert_called_once()
 
 
 def test_manage_categories_hide_option(handler):
-    with patch("builtins.input", side_effect=["3", "5"]), \
-         patch.object(handler, "hide_category") as mock_hide:
+    with patch("builtins.input", side_effect=["3", "5"]), patch.object(
+        handler, "hide_category"
+    ) as mock_hide:
         handler.manage_categories()
         mock_hide.assert_called_once()
 
 
 def test_manage_categories_unhide_option(handler):
-    with patch("builtins.input", side_effect=["4", "5"]), \
-         patch.object(handler, "unhide_category") as mock_unhide:
+    with patch("builtins.input", side_effect=["4", "5"]), patch.object(
+        handler, "unhide_category"
+    ) as mock_unhide:
         handler.manage_categories()
         mock_unhide.assert_called_once()
 
 
 def test_manage_categories_invalid_option(handler):
     with patch("builtins.input", side_effect=["9", "5"]):
-        handler.manage_categories()  # Should print 'Invalid option.' and then exit
+        handler.manage_categories()
 
 
 def test_add_category_unexpected_status(handler):
     class FakeResp:
         status_code = 500
-    with patch("client.handlers.news_category_handler.post_json", return_value=FakeResp()), \
-         patch("builtins.input", return_value="newcat"):
+
+    with patch(
+        "client.handlers.news_category_handler.post_json", return_value=FakeResp()
+    ), patch("builtins.input", return_value="newcat"):
         handler.add_category()
 
 
@@ -195,9 +201,13 @@ def test_hide_category_none_response(handler):
     fake_categories = [
         {"id": 1, "name": "general", "is_hidden": False},
     ]
-    with patch("client.handlers.news_category_handler.get_json", return_value=fake_categories), \
-         patch("client.handlers.news_category_handler.post_json", return_value=None), \
-         patch("builtins.input", side_effect=["1"]):
+    with patch(
+        "client.handlers.news_category_handler.get_json", return_value=fake_categories
+    ), patch(
+        "client.handlers.news_category_handler.post_json", return_value=None
+    ), patch(
+        "builtins.input", side_effect=["1"]
+    ):
         handler.hide_category()
 
 
@@ -205,13 +215,19 @@ def test_unhide_category_none_response(handler):
     fake_categories = [
         {"id": 1, "name": "general", "is_hidden": True},
     ]
-    with patch("client.handlers.news_category_handler.get_json", return_value=fake_categories), \
-         patch("client.handlers.news_category_handler.post_json", return_value=None), \
-         patch("builtins.input", side_effect=["1"]):
+    with patch(
+        "client.handlers.news_category_handler.get_json", return_value=fake_categories
+    ), patch(
+        "client.handlers.news_category_handler.post_json", return_value=None
+    ), patch(
+        "builtins.input", side_effect=["1"]
+    ):
         handler.unhide_category()
 
 
 def test_list_categories_error_logging(handler):
-    with patch("client.handlers.news_category_handler.get_json", side_effect=Exception()):
+    with patch(
+        "client.handlers.news_category_handler.get_json", side_effect=Exception()
+    ):
         with pytest.raises(Exception):
             handler.list_categories()

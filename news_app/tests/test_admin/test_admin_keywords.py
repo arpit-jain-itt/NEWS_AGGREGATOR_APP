@@ -7,7 +7,6 @@ ADMIN_HEADERS = {"X-User-ID": "1"}
 
 @pytest.fixture
 def fake_keywords_state():
-    # Start with two keywords
     return [
         KeywordFilter(
             id=1,

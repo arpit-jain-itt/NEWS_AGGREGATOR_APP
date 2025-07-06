@@ -37,8 +37,9 @@ def test_list_reported_articles_invalid_input(handler):
     fake_reported = [
         {"article_id": 10, "report_count": 2},
     ]
-    with patch("client.handlers.news_reporting_handler.get_json", return_value=fake_reported), \
-         patch("builtins.input", side_effect=["invalid", "b"]):
+    with patch(
+        "client.handlers.news_reporting_handler.get_json", return_value=fake_reported
+    ), patch("builtins.input", side_effect=["invalid", "b"]):
         handler.list_reported_articles()
 
 
@@ -109,24 +110,33 @@ def test_manage_reported_article_unhide_error(handler):
 
 def test_manage_reported_article_invalid_choice(handler):
     fake_article = {"id": 10, "title": "Test Article", "is_hidden": False}
-    with patch("client.handlers.news_reporting_handler.get_json", return_value=fake_article), \
-         patch("builtins.input", side_effect=["9", "4"]):
+    with patch(
+        "client.handlers.news_reporting_handler.get_json", return_value=fake_article
+    ), patch("builtins.input", side_effect=["9", "4"]):
         handler.manage_reported_article(10)
 
 
 def test_manage_reported_article_hide_none_response(handler):
     fake_article = {"id": 10, "title": "Test Article", "is_hidden": False}
-    with patch("client.handlers.news_reporting_handler.get_json", return_value=fake_article), \
-         patch("client.handlers.news_reporting_handler.post_json", return_value=None), \
-         patch("builtins.input", side_effect=["2", "4"]):
+    with patch(
+        "client.handlers.news_reporting_handler.get_json", return_value=fake_article
+    ), patch(
+        "client.handlers.news_reporting_handler.post_json", return_value=None
+    ), patch(
+        "builtins.input", side_effect=["2", "4"]
+    ):
         handler.manage_reported_article(10)
 
 
 def test_manage_reported_article_unhide_none_response(handler):
     fake_article = {"id": 10, "title": "Test Article", "is_hidden": True}
-    with patch("client.handlers.news_reporting_handler.get_json", return_value=fake_article), \
-         patch("client.handlers.news_reporting_handler.post_json", return_value=None), \
-         patch("builtins.input", side_effect=["3", "4"]):
+    with patch(
+        "client.handlers.news_reporting_handler.get_json", return_value=fake_article
+    ), patch(
+        "client.handlers.news_reporting_handler.post_json", return_value=None
+    ), patch(
+        "builtins.input", side_effect=["3", "4"]
+    ):
         handler.manage_reported_article(10)
 
 
@@ -159,8 +169,9 @@ def test_list_blocked_articles_invalid_input(handler):
     fake_blocked = [
         {"id": 10, "title": "Blocked Article"},
     ]
-    with patch("client.handlers.news_reporting_handler.get_json", return_value=fake_blocked), \
-         patch("builtins.input", side_effect=["invalid", "b"]):
+    with patch(
+        "client.handlers.news_reporting_handler.get_json", return_value=fake_blocked
+    ), patch("builtins.input", side_effect=["invalid", "b"]):
         handler.list_blocked_articles()
 
 
@@ -203,15 +214,17 @@ def test_manage_blocked_article_unhide_error(handler):
 
 def test_manage_blocked_article_already_unhidden(handler):
     fake_article = {"id": 10, "title": "Blocked Article", "is_hidden": False}
-    with patch("client.handlers.news_reporting_handler.get_json", return_value=fake_article), \
-         patch("builtins.input", side_effect=["2", "3"]):
+    with patch(
+        "client.handlers.news_reporting_handler.get_json", return_value=fake_article
+    ), patch("builtins.input", side_effect=["2", "3"]):
         handler.manage_blocked_article(10)
 
 
 def test_manage_blocked_article_invalid_option(handler):
     fake_article = {"id": 10, "title": "Blocked Article", "is_hidden": True}
-    with patch("client.handlers.news_reporting_handler.get_json", return_value=fake_article), \
-         patch("builtins.input", side_effect=["9", "3"]):
+    with patch(
+        "client.handlers.news_reporting_handler.get_json", return_value=fake_article
+    ), patch("builtins.input", side_effect=["9", "3"]):
         handler.manage_blocked_article(10)
 
 
@@ -254,8 +267,9 @@ def test_list_my_reported_articles_invalid_input(handler):
     fake_reports = [
         {"article_id": 10, "reason": "spam", "created_at": "2024-06-29T12:00:00"},
     ]
-    with patch("client.handlers.news_reporting_handler.get_json", return_value=fake_reports), \
-         patch("builtins.input", side_effect=["invalid", "b"]):
+    with patch(
+        "client.handlers.news_reporting_handler.get_json", return_value=fake_reports
+    ), patch("builtins.input", side_effect=["invalid", "b"]):
         handler.list_my_reported_articles()
 
 
@@ -263,8 +277,10 @@ def test_list_my_reported_articles_article_fetch_none(handler):
     fake_reports = [
         {"article_id": 10, "reason": "spam", "created_at": "2024-06-29T12:00:00"},
     ]
-    with patch("client.handlers.news_reporting_handler.get_json", side_effect=[fake_reports, None]), \
-         patch("builtins.input", side_effect=["1", "b"]):
+    with patch(
+        "client.handlers.news_reporting_handler.get_json",
+        side_effect=[fake_reports, None],
+    ), patch("builtins.input", side_effect=["1", "b"]):
         handler.list_my_reported_articles()
 
 
@@ -273,8 +289,10 @@ def test_list_my_reported_articles_submenu_go_back(handler):
         {"article_id": 10, "reason": "spam", "created_at": "2024-06-29T12:00:00"},
     ]
     fake_article = {"id": 10, "title": "Reported Article", "is_hidden": False}
-    with patch("client.handlers.news_reporting_handler.get_json", side_effect=[fake_reports, fake_article]), \
-         patch("builtins.input", side_effect=["1", "2", "b"]):
+    with patch(
+        "client.handlers.news_reporting_handler.get_json",
+        side_effect=[fake_reports, fake_article],
+    ), patch("builtins.input", side_effect=["1", "2", "b"]):
         handler.list_my_reported_articles()
 
 
@@ -285,10 +303,16 @@ def test_list_my_reported_articles_submenu_invalid_option(handler):
     fake_article = {"id": 10, "title": "Reported Article", "is_hidden": False}
     with patch(
         "client.handlers.news_reporting_handler.get_json",
-        side_effect=[fake_reports, fake_article, fake_article, fake_article]
+        side_effect=[fake_reports, fake_article, fake_article, fake_article],
     ), patch(
         "builtins.input",
-        side_effect=["1", "9", "9", "2", "b"]  # enough invalids, then go back, then exit
+        side_effect=[
+            "1",
+            "9",
+            "9",
+            "2",
+            "b",
+        ],  # enough invalids, then go back, then exit
     ):
         handler.list_my_reported_articles()
 
@@ -319,5 +343,8 @@ def test_unreport_article_none_response(handler):
 def test_unreport_article_non_200_status(handler):
     class FakeResp:
         status_code = 500
-    with patch("client.handlers.news_reporting_handler.delete_json", return_value=FakeResp()):
+
+    with patch(
+        "client.handlers.news_reporting_handler.delete_json", return_value=FakeResp()
+    ):
         handler.unreport_article(10)

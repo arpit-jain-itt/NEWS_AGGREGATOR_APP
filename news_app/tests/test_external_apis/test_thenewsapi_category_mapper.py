@@ -6,7 +6,7 @@ def test_map_article_to_category_business():
     category = map_article_to_category(article)
     print("\ntest_map_article_to_category_business:", category)
     assert category == "business"
-    print("PASS: Correctly mapped to 'business'.")
+    print("Correctly mapped to 'business'.")
 
 
 def test_map_article_to_category_sports():
@@ -14,7 +14,7 @@ def test_map_article_to_category_sports():
     category = map_article_to_category(article)
     print("\ntest_map_article_to_category_sports:", category)
     assert category == "sports"
-    print("PASS: Correctly mapped to 'sports'.")
+    print("Correctly mapped to 'sports'.")
 
 
 def test_map_article_to_category_technology():
@@ -22,7 +22,7 @@ def test_map_article_to_category_technology():
     category = map_article_to_category(article)
     print("\ntest_map_article_to_category_technology:", category)
     assert category == "technology"
-    print("PASS: Correctly mapped to 'technology'.")
+    print("Correctly mapped to 'technology'.")
 
 
 def test_map_article_to_category_default():
@@ -30,4 +30,4 @@ def test_map_article_to_category_default():
     category = map_article_to_category(article)
     print("\ntest_map_article_to_category_default:", category)
     assert category == "general"
-    print("PASS: Correctly mapped to 'general' for unknown content.")
+    print("Correctly mapped to 'general' for unknown content.")

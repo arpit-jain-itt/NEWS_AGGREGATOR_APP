@@ -5,6 +5,20 @@ from server.models.article_model import Article
 from server.models.category_model import Category
 
 
+def fake_article_dict(id=1, title="Test Article"):
+    return {
+        "id": id,
+        "title": title,
+        "description": "desc",
+        "content": "content",
+        "url": "http://abc_test.com",
+        "published_at": datetime.now(),
+        "source_id": 1,
+        "category_id": 1,
+        "category_name": "general",
+    }
+
+
 def fake_article(id=1, title="Test Article"):
     return Article(
         id=id,
@@ -96,7 +110,7 @@ def test_article_details(client):
 
 
 def test_personalized_news(client):
-    fake_articles = [fake_article(1, "Personalized 1")]
+    fake_articles = [fake_article_dict(1, "Personalized 1")]
     with patch(
         "server.services.news_service.NewsService.get_personalized_articles",
         return_value=fake_articles,
@@ -109,19 +123,28 @@ def test_personalized_news(client):
 
 
 def test_headlines_error(client):
-    with patch("server.services.news_service.NewsService.search_articles", side_effect=Exception()):
+    with patch(
+        "server.services.news_service.NewsService.search_articles",
+        side_effect=Exception(),
+    ):
         res = client.get("/api/news/headlines")
         assert res.status_code in (500, 400)
 
 
 def test_latest_error(client):
-    with patch("server.services.news_service.NewsService.get_latest_articles", side_effect=Exception()):
+    with patch(
+        "server.services.news_service.NewsService.get_latest_articles",
+        side_effect=Exception(),
+    ):
         res = client.get("/api/news/latest")
         assert res.status_code in (500, 400)
 
 
 def test_search_articles_error(client):
-    with patch("server.services.news_service.NewsService.search_articles", side_effect=Exception()):
+    with patch(
+        "server.services.news_service.NewsService.search_articles",
+        side_effect=Exception(),
+    ):
         res = client.get("/api/news/search?keyword=test")
         assert res.status_code in (500, 400)
 
@@ -138,7 +161,6 @@ def test_headlines_empty(client):
 
 
 def test_headlines_invalid_keyword(client):
-    # Simulate search_articles returning articles with no keyword match
     with patch(
         "server.services.news_service.NewsService.search_articles",
         return_value=[],
@@ -169,31 +191,24 @@ def test_personalized_news_empty(client):
         assert data == []
 
 
-# Simulate scoring logic for personalized articles
-from unittest.mock import MagicMock
-
 def test_personalized_news_scoring(client):
-    fake_article_obj = fake_article(1, "Personalized Scored")
-    # Patch NewsService to simulate scoring logic
+    fake_article_dict_obj = fake_article_dict(1, "Personalized Scored")
     with patch(
         "server.services.news_service.NewsService.get_personalized_articles",
-        return_value=[fake_article_obj],
+        return_value=[fake_article_dict_obj],
     ) as mock_personalized:
         res = client.get("/api/news/personalized/1")
         data = get_data(res)
         assert res.status_code == 200
         assert data[0]["title"] == "Personalized Scored"
-        # Optionally, check that scoring logic was called (if exposed)
-        # mock_personalized.assert_called_once()
 
 
-# Test timestamp parsing edge case via NewsService (simulate parse_ts)
 def test_headlines_with_invalid_timestamp(client):
-    # Patch NewsService to simulate parse_ts returning current time on error
     broken_article = fake_article(1, "Broken Timestamp")
-    # Instead of setting published_at to a string, patch parse_ts to raise an exception
-    with patch("server.services.news_service.NewsService.search_articles", return_value=[broken_article]), \
-         patch("server.utils.service_helper.parse_ts", side_effect=Exception()):
+    with patch(
+        "server.services.news_service.NewsService.search_articles",
+        return_value=[broken_article],
+    ), patch("server.utils.service_helper.parse_ts", side_effect=Exception()):
         res = client.get("/api/news/headlines")
         data = get_data(res)
         assert res.status_code == 200

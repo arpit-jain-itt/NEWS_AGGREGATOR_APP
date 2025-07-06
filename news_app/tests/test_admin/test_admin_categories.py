@@ -6,7 +6,6 @@ ADMIN_HEADERS = {"X-User-ID": "1"}
 
 @pytest.fixture
 def fake_categories_state():
-    # Start with one category
     return [
         {
             "id": 1,
@@ -37,7 +36,7 @@ def test_hide_category(client, fake_categories_state):
 
 
 def test_unhide_category(client, fake_categories_state):
-    # Simulate that category 1 is hidden
+    #   category 1 is hidden
     fake_categories_state[0]["is_hidden"] = True
 
     def unhide_category(category_id):

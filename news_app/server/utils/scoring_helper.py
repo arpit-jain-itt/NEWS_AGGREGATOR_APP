@@ -49,7 +49,6 @@ class ScoringHelper:
     ) -> float:
         """
         Score articles based on recency. The more recent, the higher the score.
-        Exponential decay to reduce impact of older articles.
         """
         if current_time is None:
             current_time = datetime.now(timezone.utc)

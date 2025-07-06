@@ -23,7 +23,6 @@ def fake_article(id=1, title="Test Article"):
 
 def get_message(response):
     data = response.get_json()
-    # Prefer message in data, fallback to top-level message
     return (data.get("data", {}) or {}).get("message", "") or data.get("message", "")
 
 
@@ -146,13 +145,18 @@ def test_report_article(client):
 
 
 def test_save_article_error(client):
-    with patch("server.services.news_service.NewsService.save_article", side_effect=Exception()):
+    with patch(
+        "server.services.news_service.NewsService.save_article", side_effect=Exception()
+    ):
         res = client.post("/api/news/save", json={"user_id": 1, "article_id": 1})
         assert res.status_code in (500, 400)
 
 
 def test_remove_saved_article_error(client):
-    with patch("server.services.news_service.NewsService.remove_saved_article", side_effect=Exception()):
+    with patch(
+        "server.services.news_service.NewsService.remove_saved_article",
+        side_effect=Exception(),
+    ):
         res = client.delete("/api/news/save?user_id=1&article_id=1")
         assert res.status_code in (500, 400)
 
