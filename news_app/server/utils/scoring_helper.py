@@ -1,6 +1,4 @@
-# server/utils/scoring_helper.py
-
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Dict
 import math
 
@@ -12,9 +10,7 @@ class ScoringHelper:
     """
 
     @staticmethod
-    def keyword_score(
-        article_keywords: List[str], user_keywords: List[str]
-    ) -> float:
+    def keyword_score(article_keywords: List[str], user_keywords: List[str]) -> float:
         """
         Score based on keyword overlap between article and
         user-preferred keywords.
@@ -56,15 +52,21 @@ class ScoringHelper:
         Exponential decay to reduce impact of older articles.
         """
         if current_time is None:
-            current_time = datetime.utcnow()
+            current_time = datetime.now(timezone.utc)
+
+        if (
+            published_at.tzinfo is None
+            or published_at.tzinfo.utcoffset(published_at) is None
+        ):
+            published_at = published_at.replace(tzinfo=timezone.utc)
 
         delta_hours = (current_time - published_at).total_seconds() / 3600.0
-        return math.exp(-delta_hours / 24.0)  # 1.0 for now, ~0.37 after 1 day
+        return math.exp(-delta_hours / 24.0)
 
     @staticmethod
     def final_score(weights: Dict[str, float]) -> float:
         """
-        Aggregate score using weights. You can adjust weights here centrally.
+        Aggregate score using weights.
         """
         return (
             0.4 * weights.get("keyword", 0)

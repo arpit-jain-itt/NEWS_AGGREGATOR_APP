@@ -38,9 +38,8 @@ class Headlines(Resource):
         start_str = args.get("start_date")
         end_str = args.get("end_date")
         category = args.get("category", "").strip()
-        keyword = args.get("keyword", "").strip()  # <-- Added
-        # Split keywords by comma and strip whitespace
-        keywords = [k.strip() for k in keyword.split(",") if k.strip()]  # <-- Added
+        keyword = args.get("keyword", "").strip()
+        keywords = [k.strip() for k in keyword.split(",") if k.strip()]
         limit, offset = get_pagination(args)
         if start_str:
             start_date, err = parse_iso_date(start_str, "start_date")
@@ -72,6 +71,7 @@ class Headlines(Resource):
                     "published_at": a.published_at.isoformat(),
                     "source_id": a.source_id,
                     "category_id": a.category_id,
+                    "category_name": getattr(a, "category_name", None),
                 }
                 for a in articles
             ],
@@ -97,6 +97,7 @@ class LatestNews(Resource):
                     "published_at": a.published_at.isoformat(),
                     "source_id": a.source_id,
                     "category_id": a.category_id,
+                    "category_name": getattr(a, "category_name", None),
                 }
                 for a in articles
             ],
@@ -139,6 +140,7 @@ class SearchArticles(Resource):
                     "published_at": a.published_at.isoformat(),
                     "source_id": a.source_id,
                     "category_id": a.category_id,
+                    "category_name": getattr(a, "category_name", None),
                 }
                 for a in results
             ],
@@ -194,17 +196,19 @@ class PersonalizedNews(Resource):
         return format_response(
             [
                 {
-                    "id": a.id,
-                    "title": a.title,
-                    "description": a.description,
-                    "content": a.content,
-                    "url": a.url,
+                    "id": a["id"],
+                    "title": a["title"],
+                    "description": a.get("description"),
+                    "content": a.get("content"),
+                    "url": a.get("url"),
                     "published_at": (
-                        a.published_at.isoformat() if a.published_at else None
+                        a["published_at"].isoformat()
+                        if isinstance(a["published_at"], datetime)
+                        else a["published_at"]
                     ),
-                    "source_id": a.source_id,
-                    "category_id": a.category_id,
-                    "category_name": getattr(a, "category_name", None),
+                    "source_id": a.get("source_id"),
+                    "category_id": a.get("category_id"),
+                    "category_name": a.get("category_name"),
                 }
                 for a in articles
             ],

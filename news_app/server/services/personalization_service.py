@@ -34,9 +34,21 @@ class PersonalizationService:
 
         for article in candidate_articles:
             article_keywords = self.extract_keywords(article)
+            published_at = article["published_at"]
+            # Ensure published_at is a datetime object and timezone-aware
+            if isinstance(published_at, str):
+                try:
+                    published_at = datetime.fromisoformat(published_at)
+                except Exception:
+                    published_at = datetime.strptime(published_at, "%Y-%m-%d %H:%M:%S")
+            if (
+                published_at.tzinfo is None
+                or published_at.tzinfo.utcoffset(published_at) is None
+            ):
+                published_at = published_at.replace(tzinfo=timezone.utc)
             weights = {
                 "keyword": ScoringHelper.keyword_score(article_keywords, user_keywords),
-                "recency": ScoringHelper.recency_score(article["published_at"], now),
+                "recency": ScoringHelper.recency_score(published_at, now),
                 "like_bonus": ScoringHelper.like_bonus(
                     article["id"] in liked_article_ids
                 ),
