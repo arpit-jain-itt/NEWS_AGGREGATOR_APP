@@ -1,0 +1,9 @@
+*config.py
+*seed_data.sql
+*venv
+*.pyc
+*pycache*
+*.pytest*
+*.log*
+*.coverage
+htmlcov
